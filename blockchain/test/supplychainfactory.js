@@ -18,6 +18,7 @@ const transition = [
   1, 2    // Produce berry -> Produce yogurt
 ] // Transitions are set up as array of pairs
 
+
 contract("SupplyChainFactory", accounts => {
   it("...should create first batch", async () => {
     const factory  = await SupplyChainFactory.new();
@@ -31,7 +32,7 @@ contract("SupplyChainFactory", accounts => {
     // Get shpply chain contract at address
     const instance = await SupplyChain.at(addr(chainAddress));
 
-    // Add myself to role 'PRODUCER'
+    // Add myself to role 'ROLE_MILK'
     await instance.addUserToRole(accounts[0], ROLE_MILK, { from: accounts[0] });
 
     // Create new batch
@@ -75,7 +76,6 @@ contract("SupplyChainFactory", accounts => {
     assert.equal(storedData, 0, "Direct precedents is not 1");
   });
 
-  
   it("...should create batch based on two prev batches", async () => {
     const factory  = await SupplyChainFactory.new();
     // Deploy new supply chain
@@ -106,6 +106,34 @@ contract("SupplyChainFactory", accounts => {
     console.log(`sotredData = ${storedData}`)
     console.log(JSON.stringify(`storedData = ${storedData}`))
     assert.equal(storedData, "0,1", "Direct precedents is not 0, 1");
+  });
+
+  it("...should not allow to execute step by a wrong role", async () => {
+    const factory  = await SupplyChainFactory.new();
+    // Deploy new supply chain
+    await factory.deployChain(roles, steps, { from: accounts[0] })
+
+    // Get supply chain address
+    const chainAddress = await factory.getOwnedChains.call(accounts[0])
+    console.log(`Deployed new SC contract at ${chainAddress}`)
+    
+    // Get shpply chain contract at address
+    const instance = await SupplyChain.at(addr(chainAddress));
+
+    // Add myself to role 'ROLE_BERRY'
+    await instance.addUserToRole(accounts[0], ROLE_BERRY, { from: accounts[0] });
+
+    // Create new batch
+    var reason = ""
+    try {
+      await instance.newBatch(1, [], 1, STEP_PRODUCE_MILK, { from: accounts[0] });
+
+      assert.fail('Error is expected')
+    } catch (e) {
+      reason = e.reason
+    }
+
+    assert.equal(reason, "Invalid user role", "Should fail on user role");
   });
 
 });
