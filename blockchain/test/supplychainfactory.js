@@ -196,7 +196,6 @@ contract("SupplyChainFactory", accounts => {
       reason = e.reason
     }
 
-    assert.equal(reason, "Instance reuse is not possible", "Should fail on state model");
+    assert.equal(reason, "Can only append states to non consumed inputs", "Should fail on state model");
   });
-
 });

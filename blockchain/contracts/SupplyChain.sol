@@ -54,9 +54,10 @@ contract SupplyChain {
     /// End modifiers
 
    /**
-    * @notice Supply chain batch data. By chaining these and not
-    * allowing them to be modified afterwards we create an Acyclic
-    * Directed Graph.
+    * @notice Supply chain batch data. Chain is represented in UTXo like
+    * fashion where an input could not be consumed twice. Together all UTXo's
+    * represent an Acyclic Directed Graph.
+    * 
     * @dev The step id is not stored in the Step itself because it
     * is always previously available to whoever looks for the step.
     * @param creator The creator of this step.
@@ -189,14 +190,10 @@ contract SupplyChain {
     * @notice A method to create a new supply chain step. The
     * msg.sender is recorded as the creator of the step, which might
     * possibly mean creator of the underlying asset as well.
-    * @param _id The item id that this step is for. This must be
-    * either the item of one of the steps in _precedents, or an id
-    * that has never been used before.
-    * @param _precedents An array of the step ids for steps
-    * considered to be predecessors to this one. Often this would
-    * just mean that the event refers to the same asset as the event
-    * pointed to, but for other steps it could point to other
-    * different assets.
+    * @param _id Asset id that this step is for. This must be
+    * either the item of one of the steps in _precedents, or a new id.
+    * @param _precedents Previous step identifiers, 'consumed' by
+    * creating a new step.
     * @param _quantity A quantity of items being created during
     * step processing
     * @param _sid A step id in supply chain
@@ -218,7 +215,7 @@ contract SupplyChain {
        for (uint i = 0; i < _precedents.length; i++){
            require(
                isLastStep(_precedents[i]),
-               "Append only on last steps."
+               "Can only append states to non consumed inputs"
            );
        }
        bool repeatInstance = false;
@@ -241,6 +238,14 @@ contract SupplyChain {
        uint256 batch = totalBatches;
        totalBatches += 1;
        lastSteps[_id] = batch;
+
+       // Consume UTXo
+       for (uint i = 0; i < _precedents.length; i++){
+          uint256 inputId = batches[_precedents[i]].id;
+          if (inputId != _id) {
+            lastSteps[inputId] = batch;
+          }
+       }
 
        for (uint i = 0; i < _quantity; i++) {
          uint256 item = totalItems;
