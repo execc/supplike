@@ -15,9 +15,10 @@ contract SupplyChainFactory {
 
     function deployChain(
         uint256[] memory _roles,
-        uint256[] memory _stepRoles
+        uint256[] memory _stepRoles,
+        uint256[] memory _transitions
     ) public returns(address) {
-        SupplyChain chain = new SupplyChain(msg.sender, _roles, _stepRoles);
+        SupplyChain chain = new SupplyChain(msg.sender, _roles, _stepRoles, _transitions);
         address newAddress = address(chain);
         contracts[msg.sender].push(newAddress);
         return newAddress;
@@ -127,14 +128,28 @@ contract SupplyChain {
     */
    mapping(uint256 => uint256) public roles;
 
+   /**
+    * @notice This map describes possible transitions between
+    * various supply chain stages
+    */
+   mapping(uint256 => uint256[]) public transitions;
+
+   /**
+    * @notice This map describes current states of steps in
+    * supply chain
+    */
+   mapping(uint256 => uint256) public states;
+
    constructor(
        address _owner,
        uint256[] memory _roles,
-       uint256[] memory _stepRoles
+       uint256[] memory _stepRoles,
+       uint256[] memory _transitions
     ) public {
        require(_owner != address(0), "Owner should be set");
        require(_roles.length > 0, "Roles should be set");
-       require(_stepRoles.length > 0, "Step rples should be set");
+       require(_stepRoles.length > 0, "Step roles should be set");
+       require(_transitions.length > 0, "Transitions should be set");
 
        owner = _owner;
 
@@ -147,10 +162,15 @@ contract SupplyChain {
        for (uint i = 0; i < _stepRoles.length; i++) {
            require(roles[_stepRoles[i]] > 0, "Invalid role ID in step");
 
-           steps[i] = Step(
+           steps[i + 1] = Step(
                _stepRoles[i]
            );
        }
+
+       for (uint i = 0; i < _transitions.length; i += 2) {
+           transitions[_transitions[i + 1]].push(_transitions[i]);
+       }
+
    }
 
   /**
@@ -193,6 +213,7 @@ contract SupplyChain {
    {
        require(_quantity > 0, "Quantity of items in batch should be more then 0");
        require(isAllowed(msg.sender, _sid), "Invalid user role");
+       require(isTransitionPossible(_precedents, _sid), "Transition is not possible by state model");
 
        for (uint i = 0; i < _precedents.length; i++){
            require(
@@ -208,7 +229,7 @@ contract SupplyChain {
            }
        }
        if (!repeatInstance){
-           require(lastSteps[_id] == 0, "Instance not valid.");
+           require(lastSteps[_id] == 0, "Instance reuse is not possible");
        }
 
        batches[totalBatches] = Batch(
@@ -226,6 +247,8 @@ contract SupplyChain {
          totalItems += 1;
          itemsToBatches[item] = _id;
        }
+
+       states[batch] = _sid;
 
        return batch;
    }
@@ -258,7 +281,7 @@ contract SupplyChain {
    }
 
    /**
-    * @notice A method to retrieve of the given user can execute given step id
+    * @notice A method to retrieve if the given user can execute given step id
     * @param _user Contract user
     * @param _sid Step id
     * @return A boolen value inidicating a possiblity of step execution
@@ -267,5 +290,38 @@ contract SupplyChain {
        return
         userRoles[_user] != 0 &&
         steps[_sid].role == userRoles[_user];
+   }
+
+   /**
+    * @notice A method to retrieve if the given precedents could be used to execute given step
+    * @param _precedents Previous step identifiers
+    * @param _sid Step id
+    * @return A boolen value inidicating a possiblity of step execution
+    */
+   function isTransitionPossible(
+       uint256[] memory _precedents,
+       uint256 _sid
+   ) public view returns (bool) {
+       uint256[] memory required = transitions[_sid];
+       uint256 count = required.length;
+
+       if (_precedents.length != count) {
+           // Extra precedents are not allowed
+           return false;
+       }
+
+       // First check if target step
+       for (uint i = 0; i < _precedents.length; i++) {
+           uint256 state = states[_precedents[i]];
+           require(state != 0, "Non existing state for precedent");
+
+           for (uint j = 0; j < required.length; j++) {
+               if (required[j] == state) {
+                   count--;
+               }
+           }
+       }
+
+       return count == 0;
    }
 }
