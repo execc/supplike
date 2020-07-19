@@ -13,8 +13,11 @@ contract SupplyChainFactory {
     */
     mapping(address => address[]) public contracts;
 
-    function deployChain() public returns(address) {
-        SupplyChain chain = new SupplyChain(msg.sender);
+    function deployChain(
+        uint256[] memory _roles,
+        uint256[] memory _stepRoles
+    ) public returns(address) {
+        SupplyChain chain = new SupplyChain(msg.sender, _roles, _stepRoles);
         address newAddress = address(chain);
         contracts[msg.sender].push(newAddress);
         return newAddress;
@@ -29,12 +32,25 @@ contract SupplyChainFactory {
     }
 }
 
+
 /**
 * @title Structured Supply Chain
 * @author Denis Vasin
 * @notice Implements a basic directed acyclyc graph supply chain with steps metadata
 */
 contract SupplyChain {
+
+    /// Modifiers
+    modifier onlyOwner()
+    {
+        require(
+            msg.sender == owner,
+            "Sender not authorized."
+        );
+
+        _;
+    }
+    /// End modifiers
 
    /**
     * @notice Supply chain batch data. By chaining these and not
@@ -54,6 +70,15 @@ contract SupplyChain {
    }
 
    /**
+    * @notice Supply chain step meta-data. By changing these you are allowed
+    * to control what participant in supply chain is able to do
+    * @param role Role identifiers that are able to execute that step
+    */
+   struct Step {
+       uint256 role;
+   }
+
+   /**
     * @notice Item counter
     */
    uint256 public totalItems;
@@ -65,9 +90,15 @@ contract SupplyChain {
 
    /**
     * @notice All batches are accessible through a mapping keyed by
-    * the batch ids. Recursive structs are not supported in solidity.
+    * the step ids.
     */
    mapping(uint256 => Batch) public batches;
+
+  /**
+    * @notice All steps are accessible through a mapping keyed by
+    * the step ids.
+    */
+   mapping(uint256 => Step) public steps;
 
    /**
     * @notice Batch counter
@@ -86,9 +117,52 @@ contract SupplyChain {
     */
    address public owner;
 
-   constructor(address _owner) public {
+   /**
+    * @notice Mapping from contract user to it's roles
+    */
+   mapping(address => uint256) public userRoles;
+
+   /**
+    * @notice Mapping from contract user to it's roles
+    */
+   mapping(uint256 => uint256) public roles;
+
+   constructor(
+       address _owner,
+       uint256[] memory _roles,
+       uint256[] memory _stepRoles
+    ) public {
        require(_owner != address(0), "Owner should be set");
+       require(_roles.length > 0, "Roles should be set");
+       require(_stepRoles.length > 0, "Step rples should be set");
+
        owner = _owner;
+
+       for (uint i = 0; i < _roles.length; i++) {
+           require(_roles[i] > 0, "Invalid role id");
+
+           roles[_roles[i]] = _roles[i];
+       }
+
+       for (uint i = 0; i < _stepRoles.length; i++) {
+           require(roles[_stepRoles[i]] > 0, "Invalid role ID in step");
+
+           steps[i] = Step(
+               _stepRoles[i]
+           );
+       }
+   }
+
+  /**
+    * @notice A method to assign a certain contract user a certain role
+    * @param _user A user to assign role
+    * @param _role A role from a list of possible roles of this contract
+    */
+   function addUserToRole(address _user, uint256 _role) public onlyOwner() {
+       require(_role > 0, "Role of 0 is reserved");
+       require(_user != address(0), "Address should be set");
+
+       userRoles[_user] = _role;
    }
 
   /**
@@ -105,13 +179,20 @@ contract SupplyChain {
     * different assets.
     * @param _quantity A quantity of items being created during
     * step processing
+    * @param _sid A step id in supply chain
     * @return The step id of the step created.
     */
-   function newBatch(uint256 _id, uint256[] memory _precedents, uint256 _quantity)
+   function newBatch(
+        uint256 _id,
+        uint256[] memory _precedents,
+        uint256 _quantity,
+        uint256 _sid
+    )
        public
        returns(uint256)
    {
        require(_quantity > 0, "Quantity of items in batch should be more then 0");
+       require(isAllowed(msg.sender, _sid), "Invalid user role");
 
        for (uint i = 0; i < _precedents.length; i++){
            require(
@@ -174,5 +255,17 @@ contract SupplyChain {
        returns(uint256[] memory)
    {
        return batches[_step].precedents;
+   }
+
+   /**
+    * @notice A method to retrieve of the given user can execute given step id
+    * @param _user Contract user
+    * @param _sid Step id
+    * @return A boolen value inidicating a possiblity of step execution
+    */
+   function isAllowed(address _user, uint256 _sid) public view returns (bool) {
+       return
+        userRoles[_user] != 0 &&
+        steps[_sid].role == userRoles[_user];
    }
 }
