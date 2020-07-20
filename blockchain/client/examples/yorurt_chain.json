@@ -1,0 +1,43 @@
+{
+    "roles": [
+        {
+            "id": 1,
+            "name": "MILK_PRODUCER"
+        },
+        {
+            "id": 2,
+            "name": "BERRY_PRODUCER"
+        },
+        {
+            "id": 3,
+            "name": "YOGURT_PRODUCER"
+        }
+    ],
+    "steps": [
+        {
+            "id": 1,
+            "name": "PRODUCE_MILK",
+            "role": 1
+        },
+        {
+            "id": 2,
+            "name": "PRODUCE_BERRY",
+            "role": 2
+        },
+        {
+            "id": 3,
+            "name": "PRODUCE_YOGURT",
+            "role": 3
+        }
+    ],
+    "transitions": [
+        {
+            "from": 1,
+            "to": 3
+        },
+        {
+            "from": 2,
+            "to": 3
+        }
+    ]
+}

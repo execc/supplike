@@ -123,7 +123,8 @@ class Likelib
             let data = this._bytecode;
             for(let i = 0; i < this._abi.length; ++i) {
                 if(this._abi[i].type == 'constructor') {
-                    const encoded_call = Web3Abi.encodeFunctionCall(this._abi[i], spread);
+                    const types = this._abi[i].inputs.map(input => input.type)
+                    const encoded_call = Web3Abi.encodeParameters(types, spread);
                     data = Buffer.concat([data, Buffer.from(encoded_call.replace('0x', ''), 'hex')]);
                     break;
                 }
