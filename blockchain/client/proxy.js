@@ -1,5 +1,5 @@
+const SupplyChainSimple = require('./bytecode/SupplyChainSimple.json')
 const Likelib = require('./likelib')
-const { abi, bytecode } = require('./simpleSupplyChain')
 
 const lk = () => new Likelib('ws://84.201.165.26:50053')
 var express = require('express');
@@ -37,15 +37,12 @@ const fullBlockInfo = (height) => new Promise((resolve, reject) => {
     lk().findBlock(Number.parseInt(height), cb)
 })
 
-
-///
-
 const deploySupplyChain = async (roles, steps, transitions, account) => {
     const contract = Likelib.Contract.nondeployed(
         lk(),
         accounts[account],
-        abi,
-        bytecode
+        SupplyChainSimple.abi,
+        SupplyChainSimple.bytecode.substr(2)
     )
 
     const deployPromise = () => {
