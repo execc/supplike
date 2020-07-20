@@ -57,7 +57,7 @@ contract SupplyChain {
     * @notice Supply chain batch data. Chain is represented in UTXo like
     * fashion where an input could not be consumed twice. Together all UTXo's
     * represent an Acyclic Directed Graph.
-    * 
+    *
     * @dev The step id is not stored in the Step itself because it
     * is always previously available to whoever looks for the step.
     * @param creator The creator of this step.
