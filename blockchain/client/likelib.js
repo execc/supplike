@@ -92,8 +92,9 @@ class Likelib
             let c = new Contract();
             c._lk = lk;
             c._account = account;
-            c._bytecode = null;
-            c._address = null;
+            c._abi = abi;
+            c._address = address;
+            c._setupMethods(c._abi);
             return c;
         }
 
@@ -157,7 +158,7 @@ class Likelib
                 else {
                     _this._address = reply.message;
                     _this._setupMethods(_this._abi);
-                    cb(null, reply.fee_left)
+                    cb(null, reply)
                 }
             });
         }

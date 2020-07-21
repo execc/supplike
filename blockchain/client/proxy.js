@@ -37,6 +37,9 @@ const fullBlockInfo = (height) => new Promise((resolve, reject) => {
     lk().findBlock(Number.parseInt(height), cb)
 })
 
+/// End internal 
+
+/// Service methods
 const deploySupplyChain = async (roles, steps, transitions, account) => {
     const contract = Likelib.Contract.nondeployed(
         lk(),
@@ -59,18 +62,41 @@ const deploySupplyChain = async (roles, steps, transitions, account) => {
     }
 
     const result = await deployPromise()
-    console.log(`Result: ${result}`)
+    console.log(`[deploySupplyChain] Result: ${JSON.stringify(result)}`)
 
-    //const lastBlock = await lastBlockInfo()
-    //console.log(`Last block: ${JSON.stringify(lastBlock)} @ ${lastBlock.top_block_number}`)
-    //const block = await fullBlockInfo(lastBlock.top_block_number)
-    //console.log(`Full last block: ${JSON.stringify(block)}`)
+    return result;
+}
 
-    //block.transactions[0]
+const addUserToRole = async (role, account, address) => {
+    const contract = Likelib.Contract.deployed(
+        lk(),
+        accounts[account],
+        SupplyChainSimple.abi,
+        address
+    )
+
+    const addUserToRolePromise = () => {
+        return new Promise((resolve, reject) => {
+            const cb = (err, result) => {
+                if (err) {
+                    return reject(err)
+                } else {
+                    resolve(result)
+                }
+            }
+            contract.addUserToRole(role, 0, 1000000, cb)
+        })
+    }
+
+    const result = await addUserToRolePromise()
+    console.log(`[addUserToRole] Result: ${JSON.stringify(result)}`)
     return result;
 }
 
 
+/// End service methods
+
+/// Http API
 var app = express();
 // parse various different custom JSON types as JSON
 var json = bodyParser.json()
@@ -93,7 +119,7 @@ app.post('/chain', json, async function (req, res) {
         .then(result => {
             return {
                 success: true,
-                result
+                address: result.message
             }
         })
         .catch(reason => {
@@ -108,6 +134,35 @@ app.post('/chain', json, async function (req, res) {
         .send(JSON.stringify(result));
 });
 
+// See example in examples/add-user-to-role.json
+app.post('/chain/:chainId/roles', json, async function (req, res) {
+    const address = req.params.chainId
+    const account = req.get('X-Account');
+
+    const { role } = req.body;
+
+    const result = await addUserToRole(
+        role, 
+        account, 
+        address
+    )
+        .then(result => {
+            return {
+                success: true,
+                result
+            }
+        })
+        .catch(reason => {
+            return {
+                success: false,
+                reason
+            }
+        });
+
+    res
+        .status(result.success ? 200 : 500)
+        .send(JSON.stringify(result));
+});
 
 app.listen(3000, function () {
     console.log('Supplike listening on port 3000!');
