@@ -7,7 +7,16 @@ var bodyParser = require('body-parser')
 
 
 const accounts = {
-    admin: new Likelib.Account('2aef91bc6d2df7c41bd605caa267e8d357e18b741c4a785e06650d649d650409')
+    admin: new Likelib.Account('2aef91bc6d2df7c41bd605caa267e8d357e18b741c4a785e06650d649d650409'),
+    user1: new Likelib.Account('708b65da771d698f5e618bf22adbf3330bf9bf9351a9f0027912502c4f6141d3'),
+    user2: new Likelib.Account('e951e2e13b03bb15b947d70e8f1c5977b67f5d1ca6753c514ed4e12b6d07c1ef'),
+    user3: new Likelib.Account('6e7382e4eaf8af6533a5716f03f41ff63b464e396c27ea435590335973492a5f'),
+    user4: new Likelib.Account('04a0d27d928ee70d949cb15c2dc483f24e300a4881c56226e14dd60589f204a6'),
+    user5: new Likelib.Account('535683fc7f3592a720230b455d734f647745007e3732c13f6c2c07e909547070'),
+    user6: new Likelib.Account('7428682a82c6765750dc98f0c41b205812ec5e33759b3307101a25b293f2986d'),
+    user7: new Likelib.Account('fdc45afd62cc529b9b92bb52c5d1f4fa0ddf071ee9d25786c0452b8bc3bc498a'),
+    user8: new Likelib.Account('d92332ddba068b77dcb7000a02e010f9310570dec3a7b21196f634e5b9905ac4'),
+    user9: new Likelib.Account('4a70d00b825df48c921e29e96d0b457889101f18dd669276766d9755112d4549'),
 }
 
 /// Internal functions
@@ -93,7 +102,31 @@ const addUserToRole = async (role, account, address) => {
     return result;
 }
 
+const newBatch = async (id, precedents, quantity, sid, account, address) => {
+    const contract = Likelib.Contract.deployed(
+        lk(),
+        accounts[account],
+        SupplyChainSimple.abi,
+        address
+    )
 
+    const newBatchPromise = () => {
+        return new Promise((resolve, reject) => {
+            const cb = (err, result) => {
+                if (err) {
+                    return reject(err)
+                } else {
+                    resolve(result)
+                }
+            }
+            contract.newBatch(id, precedents, quantity, sid, 0, 1000000, cb)
+        })
+    }
+
+    const result = await newBatchPromise()
+    console.log(`[newBatch] Result: ${JSON.stringify(result)}`)
+    return result;
+}
 /// End service methods
 
 /// Http API
@@ -134,7 +167,7 @@ app.post('/chain', json, async function (req, res) {
         .send(JSON.stringify(result));
 });
 
-// See example in examples/add-user-to-role.json
+// See example in examples/add_user_to_role.json
 app.post('/chain/:chainId/roles', json, async function (req, res) {
     const address = req.params.chainId
     const account = req.get('X-Account');
@@ -150,6 +183,39 @@ app.post('/chain/:chainId/roles', json, async function (req, res) {
             return {
                 success: true,
                 result
+            }
+        })
+        .catch(reason => {
+            return {
+                success: false,
+                reason
+            }
+        });
+
+    res
+        .status(result.success ? 200 : 500)
+        .send(JSON.stringify(result));
+});
+
+// See example in examples/new_batch.json
+app.post('/chain/:chainId/batch', json, async function (req, res) {
+    const address = req.params.chainId
+    const account = req.get('X-Account');
+
+    const { id, precedents, quantity, sid } = req.body;
+
+    const result = await newBatch(
+        id, 
+        precedents, 
+        quantity,
+        sid,
+        account,
+        address
+    )
+        .then(result => {
+            return {
+                success: true,
+                id: result["0"]
             }
         })
         .catch(reason => {
