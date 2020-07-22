@@ -13,7 +13,7 @@ import MenuIcon from "@material-ui/icons/Menu";
 import PublishIcon from "@material-ui/icons/Publish";
 import {
   addContract,
-  getContract,
+  getDraftContract,
   editContract,
   getContractName,
 } from "../../utils/contractUtils";
@@ -102,7 +102,7 @@ export const Editor = ({ onOpenList, id }: EditorProps) => {
     onOpenList();
   };
 
-  const contract: Contract | null = id ? getContract(id) : null;
+  const contract: Contract | null = id ? getDraftContract(id) : null;
 
   React.useEffect(() => {
     if (contract) {

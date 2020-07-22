@@ -9,72 +9,104 @@ import {
   ChainStepsInfo,
   ChainTransitionsInfo,
   createChain,
+  getChainIdList,
+  getChainById,
 } from "../service";
 
 export const CONTRACTS_KEY = "CONTRACT_LIST";
 
 export const getContractName = () => Math.random().toString();
 
-export const getContractsList = (): Contract[] => {
+export const getDraftContractsList = (): Contract[] => {
   const data = localStorage.getItem(CONTRACTS_KEY);
   return data ? JSON.parse(data) : [];
 };
 
-export const setContractsList = (contracts: Contract[]) =>
+export const getContractsList = async (): Promise<Contract[]> => {
+  const publishedIds = await getChainIdList();
+  const drafts = getDraftContractsList();
+  return [
+    ...publishedIds.map(
+      (id): Contract => ({
+        title: id,
+        status: "published",
+      })
+    ),
+    ...drafts,
+  ];
+};
+
+export const setDraftContractsList = (contracts: Contract[]) =>
   localStorage.setItem(CONTRACTS_KEY, JSON.stringify(contracts));
 
 export const addContract = (title: string, contractData: ContractData) => {
-  const contracts = getContractsList();
+  const contracts = getDraftContractsList();
   contracts.push({
     title,
     status: "draft",
     data: contractData,
   });
-  setContractsList(contracts);
+  setDraftContractsList(contracts);
 };
 
 export const editContract = (id: string, contractData: ContractData) => {
-  const contracts = getContractsList();
+  const contracts = getDraftContractsList();
   const contract = contracts.find(({ title }: Contract) => title === id);
   contract.data = contractData;
-  setContractsList(contracts);
+  setDraftContractsList(contracts);
 };
 
-export const getContract = (id: string): Contract | null => {
-  const contracts = getContractsList();
+export const getDraftContract = (id: string): Contract | null => {
+  const contracts = getDraftContractsList();
   return contracts.find(({ title }: Contract) => title === id);
 };
 
+export const getContract = async (id: string): Promise<Contract | null> => {
+  const chain = await getChainById(id);
+  return chain ? chainToContract(id, chain) : null;
+};
+
 export const copyContract = (title: string, id: string) => {
-  addContract(title, getContract(id).data);
+  addContract(title, getDraftContract(id).data);
 };
 
 export const publishContract = (id: string) => {
-  const contracts = getContractsList();
+  const contracts = getDraftContractsList();
   const contract = contracts.find(({ title }: Contract) => title === id);
-  contract.status = "published";
-  setContractsList(contracts);
+  setDraftContractsList(
+    contracts.filter(({ title }: Contract) => title === id)
+  );
   createChain(contractToChain(contract));
 };
 
 export const deleteContract = (id: string) => {
-  const contracts = getContractsList();
+  const contracts = getDraftContractsList();
   const contractIndex = contracts.findIndex(
     ({ title }: Contract) => title === id
   );
   contracts.splice(contractIndex, 1);
-  setContractsList(contracts);
+  setDraftContractsList(contracts);
 };
 
 export const setPublicKeys = (id: string, keys: ContractKeys) => {
-  const contracts = getContractsList();
+  const contracts = getDraftContractsList();
   const contract = contracts.find(({ title }: Contract) => title === id);
   contract.keys = keys;
-  setContractsList(contracts);
+  setDraftContractsList(contracts);
 };
 
 type ChainRolesInfoWithNodeId = ChainRolesInfo & {
   nodeId: string;
+};
+
+const chainToContract = (id: string, chain: Chain): Contract => {
+  const { meta } = chain;
+
+  return {
+    title: id,
+    data: JSON.parse(meta),
+    status: "published",
+  };
 };
 
 const contractToChain = (contract: Contract): Chain => {
@@ -115,5 +147,6 @@ const contractToChain = (contract: Contract): Chain => {
     roles,
     steps,
     transitions,
+    meta: JSON.stringify(contract.data),
   };
 };

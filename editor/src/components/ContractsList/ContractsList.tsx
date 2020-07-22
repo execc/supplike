@@ -37,7 +37,7 @@ export type ContractKeys = { [id: string]: string };
 export type Contract = {
   title: string;
   status: ContractStatus;
-  data: ContractData;
+  data?: ContractData;
   keys?: ContractKeys;
 };
 
@@ -68,21 +68,32 @@ export const ContractsList = ({
 }: ContractsListProps) => {
   const classes = useContractsListStyle();
 
-  const [contracts, setContracts] = useState<Contract[]>(getContractsList());
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [recieved, setRecieved] = useState<boolean>(false);
 
-  const handleCopyFactory = (id: string) => () => {
+  React.useEffect(() => {
+    if (!recieved) {
+      (async () => {
+        setContracts(await getContractsList());
+        setRecieved(true);
+      })();
+    }
+  });
+
+  const handleCopyFactory = (id: string) => async () => {
     copyContract(getContractName(), id);
-    setContracts(getContractsList());
+    setContracts(await getContractsList());
   };
 
-  const handlePublishFactory = (id: string) => () => {
+  const handlePublishFactory = (id: string) => async () => {
     publishContract(id);
-    setContracts(getContractsList());
+    //TODO: delay
+    setContracts(await getContractsList());
   };
 
-  const handleDeleteFactory = (id: string) => () => {
+  const handleDeleteFactory = (id: string) => async () => {
     deleteContract(id);
-    setContracts(getContractsList());
+    setContracts(await getContractsList());
   };
 
   const handleEditAttributeFactory = (id: string) => () => onEditAttribute(id);
@@ -96,9 +107,11 @@ export const ContractsList = ({
             <EditIcon />
           </IconButton>
         )}
-        <IconButton onClick={handleCopyFactory(title)} title="copy">
-          <FileCopyIcon />
-        </IconButton>
+        {status === "draft" && (
+          <IconButton onClick={handleCopyFactory(title)} title="copy">
+            <FileCopyIcon />
+          </IconButton>
+        )}
         {status === "published" && (
           <IconButton
             title="edit attributes"

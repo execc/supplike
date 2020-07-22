@@ -1,6 +1,10 @@
 import * as React from "react";
 import { Contract, ContractKeys } from "../ContractsList/ContractsList";
-import { getContract, setPublicKeys } from "../../utils/contractUtils";
+import {
+  getDraftContract,
+  setPublicKeys,
+  getContract,
+} from "../../utils/contractUtils";
 import {
   makeStyles,
   List,
@@ -55,7 +59,21 @@ const useStyles = makeStyles({
 
 export const AttributeEditor = ({ id, onOpenList }: AttributeEditorProps) => {
   const classes = useStyles();
-  const contract: Contract | null = id ? getContract(id) : null;
+
+  const [contract, setContract] = React.useState<Contract | null>(null);
+  const [keys, setKeys] = React.useState<ContractKeys>({});
+  const [recieved, setRecieved] = React.useState<boolean>(false);
+
+  React.useEffect(() => {
+    if (!recieved) {
+      (async () => {
+        const contract = await getContract(id);
+        setContract(contract);
+        contract.keys && setKeys(contract.keys);
+        setRecieved(true);
+      })();
+    }
+  });
 
   const [open, setOpen] = React.useState<string>("");
 
@@ -64,7 +82,6 @@ export const AttributeEditor = ({ id, onOpenList }: AttributeEditorProps) => {
     handleEditOff();
   };
 
-  const [keys, setKeys] = React.useState<ContractKeys>(contract.keys || {});
   const [editId, setEditId] = React.useState<string>("");
   const handleEditOnFactory = (id: string) => () => {
     setEditId(id);
@@ -91,6 +108,10 @@ export const AttributeEditor = ({ id, onOpenList }: AttributeEditorProps) => {
   const handlePublish = () => {
     setPublicKeys(id, keys);
   };
+
+  if (!contract) {
+    return null;
+  }
 
   const models = (Object.values(contract.data.layers[1].models) as any[])
     .filter((model) => model.nodeType !== "link")
@@ -162,7 +183,7 @@ export const AttributeEditor = ({ id, onOpenList }: AttributeEditorProps) => {
                       ) : (
                         <>
                           <ListItemText
-                            primary={model.id}
+                            primary={model.title}
                             secondary={keys[model.id]}
                           />
                           <ListItemSecondaryAction>
