@@ -20,7 +20,13 @@ const env = {
 
 const currentEnv = 'yc'
 
-const lk = () => new Likelib(env[currentEnv].url)
+var _lk = null;
+const lk = () => {
+    if (!_lk) {
+        _lk = new Likelib(env[currentEnv].url);
+    }
+    return _lk;
+}
 
 var express = require('express');
 var bodyParser = require('body-parser')
@@ -30,6 +36,14 @@ const db = {
 
 }
 //
+
+var groupBy = function(xs, key) {
+    return xs.reduce(function(rv, x) {
+      (rv[x[key]] = rv[x[key]] || []).push(x);
+      return rv;
+    }, {});
+  };
+  
 
 const accounts = {
     admin: new Likelib.Account('2aef91bc6d2df7c41bd605caa267e8d357e18b741c4a785e06650d649d650409'),
@@ -54,6 +68,20 @@ const lastBlockInfo = () => new Promise((resolve, reject) => {
         }
     }
     lk().lastBlockInfo(cb)
+})
+
+
+const findTransaction = (id) => new Promise((resolve, reject) => {
+    console.log(`DEBUG: Call findTransaction`)
+    const cb = (err, result) => {
+        console.log(`DEBUG: Response findTransaction err: ${JSON.stringify(err)}, result: ${JSON.stringify(result)}`)
+        if (err) {
+            return reject(err)
+        } else {
+            resolve(result)
+        }
+    }
+    lk().findTransaction(id, cb)
 })
 
 const fullBlockInfo = (height) => new Promise((resolve, reject) => {
@@ -101,6 +129,7 @@ const deploySupplyChain = async (roles, steps, transitions, account) => {
 }
 
 const addUserToRole = async (role, account, address) => {
+    console.log(`[addUserToRole] Input: ${JSON.stringify({role, account, address})}`)
     const contract = Likelib.Contract.deployed(
         lk(),
         accounts[account],
@@ -229,6 +258,10 @@ app.post('/chain', json, async function (req, res) {
                 db.contracts[account] = []
             }
             db.contracts[account].push(result.message)
+            if (!db.chains) {
+                db.chains = {}
+            }
+            db.chains[result.message] = req.body
             return result
         })
         .then(result => {
@@ -259,6 +292,26 @@ app.get('/chain', json, async function (req, res) {
     }
 });
 
+app.get('/chain/:chainId', json, async function (req, res) {
+    const address = req.params.chainId
+
+    if (db.chains && db.chains[address]) {
+        res.send(JSON.stringify(db.chains[address]))
+    } else {
+        res.status(404).send(JSON.stringify({success: false, reason: 'Not Found'}))
+    }
+});
+
+app.get('/chain/:chainId/step', json, async function (req, res) {
+    const address = req.params.chainId
+
+    if (db.steps && db.steps[address]) {
+        res.send(JSON.stringify(db.steps[address]))
+    } else {
+        res.send(JSON.stringify([]))
+    }
+});
+
 // See example in examples/add_user_to_role.json
 app.post('/chain/:chainId/roles', json, async function (req, res) {
     const address = req.params.chainId
@@ -274,7 +327,7 @@ app.post('/chain/:chainId/roles', json, async function (req, res) {
         .then(result => {
             return {
                 success: true,
-                result
+                hash: result["hash"]
             }
         })
         .catch(reason => {
@@ -305,9 +358,27 @@ app.post('/chain/:chainId/batch', json, async function (req, res) {
         address
     )
         .then(result => {
+            if (!db.steps) {
+                db.steps = {}
+            }
+            if (!db.steps[address]) {
+                db.steps[address] = {}
+            }
+            db.steps[address].push({
+                id,
+                precedents,
+                quantity,
+                sid,
+                tx: result["hash"],
+                step: result["0"]
+            })
+            return result
+        })
+        .then(result => {
             return {
                 success: true,
-                id: result["0"]
+                id: result["0"],
+                tx: result["hash"]
             }
         })
         .catch(reason => {
@@ -321,6 +392,27 @@ app.post('/chain/:chainId/batch', json, async function (req, res) {
         .status(result.success ? 200 : 500)
         .send(JSON.stringify(result));
 });
+
+app.get('/tx/:txId', json, async function (req, res) {
+    const txId = req.params.txId
+    const result = await findTransaction(txId)
+        .then(result => {
+            return {
+                success: true,
+                ...result
+            }
+        })
+        .catch(err => {
+            return {
+                success: false,
+                ...err
+            }
+        })
+
+    res
+        .status(result.success ? 200 : 404)
+        .send(JSON.stringify(result))
+})
 
 // See example in examples/new_batch.json
 app.get('/chain/:chainId/step/:stepId', json, async function (req, res) {

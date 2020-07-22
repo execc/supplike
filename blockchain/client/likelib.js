@@ -158,7 +158,10 @@ class Likelib
                 else {
                     _this._address = reply.message;
                     _this._setupMethods(_this._abi);
-                    cb(null, reply)
+                    cb(null, {
+                        ...reply,
+                        hash: tx.computeHash()
+                    })
                 }
             });
         }
@@ -193,10 +196,15 @@ class Likelib
                                     let hex_reply = Buffer.from(reply.message, 'base64').toString('hex');
                                     hex_reply = hex_reply.slice(8, hex_reply.length)
                                     const decoded = Web3Abi.decodeParameters(abi[i].outputs, hex_reply);
-                                    cb(null, decoded);
+                                    cb(null, {
+                                        ...decoded,
+                                        hash: tx.computeHash().toString('hex')
+                                    });
                                 }
                                 else {
-                                    cb(null);
+                                    cb(null, {
+                                        hash: tx.computeHash().toString('hex')
+                                    });
                                 }
                             }
                         })
