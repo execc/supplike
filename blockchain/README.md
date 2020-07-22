@@ -39,6 +39,12 @@ V6pTotjo6AmUg9aQjLhcBQc13kd
 
 ```
 
+```
+transfer git/keys/base q7vtD7yoYPbd9DjKMaXvr2kbnSX 0 10000000 
+transfer git/keys/base 2TFRxkD9n5LRgZLXpLiNytbGb2gR 0 10000000 
+transfer git/keys/base 3GF2U57J6LX26jtHSgZJDwFmFwnT 0 10000000
+```
+
 
 
 likelib> connect 127.0.0.1:50053

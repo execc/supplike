@@ -242,10 +242,42 @@ contract SupplyChainSimple {
     */
    function getDirectPrecedents(uint256 _step)
        public
-       view
+       /*view*/
        returns(uint256[] memory)
    {
        return batches[_step].precedents;
+   }
+
+   /**
+    * @notice A method to retrieve the batch info of a step.
+    * @param _step The step id of the step to retrieve precedents
+    * for.
+    * @return An array with the step ids of the precedent steps.
+    */
+   function getBatch(uint256 _step)
+       public
+       /*view*/
+       returns(uint256)
+   {
+       return (
+           batches[_step].id
+        );
+   }
+
+   /**
+    * @notice A method to retrieve the batch info of a step.
+    * @param _step The step id of the step to retrieve precedents
+    * for.
+    * @return An array with the step ids of the precedent steps.
+    */
+   function getPrecedents(uint256 _step)
+       public
+       /*view*/
+       returns(uint256[] memory)
+   {
+       return (
+           batches[_step].precedents
+        );
    }
 
    /**

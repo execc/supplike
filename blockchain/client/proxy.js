@@ -1,25 +1,48 @@
 const SupplyChainSimple = require('./bytecode/SupplyChainSimple.json')
 const Likelib = require('./likelib')
 
-const lk = () => new Likelib('ws://84.201.165.26:50053')
+// const lk = () => new Likelib('ws://84.201.165.26:50053')
+
+const env = {
+    yc: {
+        url: 'ws://84.201.165.26:50053',
+        user1: '6d3e6bb8ffaff80ce4270f3db91bbfd6fc13efe095754bb492c82ab4a15c184d',
+        user2: '52af23d8909acc73ac127bdd8581c4272980504cc932195c336dfcfc320b1459',
+        user3: 'a770305ea6c6066cbfa2fe4616cfb9d659efe9c21fd58845b9eac420278405df'
+    },
+    debug: {
+        url: 'ws://86.57.193.146:5050',
+        user1: '8215192a2a3e07fdde156c4e752b550d067d39e9aca2446e6367b15c8dbdb75e',
+        user2: '4405613e8c855dca75b8fa608d44bb08db1260970dd4a8309e723761c98f2baf',
+        user3: '273839f82b2d94e1b557304423ab9115137db822a40ec0b72b196b968fdc72e1'
+    }
+}
+
+const currentEnv = 'yc'
+
+const lk = () => new Likelib(env[currentEnv].url)
+
 var express = require('express');
 var bodyParser = require('body-parser')
 
+// Db emulation
+const db = {
+
+}
+//
 
 const accounts = {
     admin: new Likelib.Account('2aef91bc6d2df7c41bd605caa267e8d357e18b741c4a785e06650d649d650409'),
-    user1: new Likelib.Account('708b65da771d698f5e618bf22adbf3330bf9bf9351a9f0027912502c4f6141d3'),
-    user2: new Likelib.Account('e951e2e13b03bb15b947d70e8f1c5977b67f5d1ca6753c514ed4e12b6d07c1ef'),
-    user3: new Likelib.Account('6e7382e4eaf8af6533a5716f03f41ff63b464e396c27ea435590335973492a5f'),
-    user4: new Likelib.Account('04a0d27d928ee70d949cb15c2dc483f24e300a4881c56226e14dd60589f204a6'),
-    user5: new Likelib.Account('535683fc7f3592a720230b455d734f647745007e3732c13f6c2c07e909547070'),
-    user6: new Likelib.Account('7428682a82c6765750dc98f0c41b205812ec5e33759b3307101a25b293f2986d'),
-    user7: new Likelib.Account('fdc45afd62cc529b9b92bb52c5d1f4fa0ddf071ee9d25786c0452b8bc3bc498a'),
-    user8: new Likelib.Account('d92332ddba068b77dcb7000a02e010f9310570dec3a7b21196f634e5b9905ac4'),
-    user9: new Likelib.Account('4a70d00b825df48c921e29e96d0b457889101f18dd669276766d9755112d4549'),
+    user1: new Likelib.Account(env[currentEnv].user1),
+    user2: new Likelib.Account(env[currentEnv].user2),
+    user3: new Likelib.Account(env[currentEnv].user3)
 }
 
 /// Internal functions
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
 const lastBlockInfo = () => new Promise((resolve, reject) => {
     console.log(`DEBUG: Call lastBlockInfo`)
     const cb = (err, result) => {
@@ -71,6 +94,7 @@ const deploySupplyChain = async (roles, steps, transitions, account) => {
     }
 
     const result = await deployPromise()
+    await sleep(2000)
     console.log(`[deploySupplyChain] Result: ${JSON.stringify(result)}`)
 
     return result;
@@ -98,6 +122,7 @@ const addUserToRole = async (role, account, address) => {
     }
 
     const result = await addUserToRolePromise()
+    await sleep(2000)
     console.log(`[addUserToRole] Result: ${JSON.stringify(result)}`)
     return result;
 }
@@ -124,8 +149,55 @@ const newBatch = async (id, precedents, quantity, sid, account, address) => {
     }
 
     const result = await newBatchPromise()
+    await sleep(1000)
     console.log(`[newBatch] Result: ${JSON.stringify(result)}`)
     return result;
+}
+
+const getBatch = async (step, account, address) => {
+    const contract = Likelib.Contract.deployed(
+        lk(),
+        accounts[account],
+        SupplyChainSimple.abi,
+        address
+    )
+
+    const getBatchPromise = () => {
+        return new Promise((resolve, reject) => {
+            const cb = (err, result) => {
+                if (err) {
+                    return reject(err)
+                } else {
+                    resolve(result)
+                }
+            }
+            contract.getBatch(step, 0, 10000, cb)
+        })
+    }
+
+    const getPrecedentsPromise = () => {
+        return new Promise((resolve, reject) => {
+            const cb = (err, result) => {
+                if (err) {
+                    return reject(err)
+                } else {
+                    resolve(result)
+                }
+            }
+            contract.getPrecedents(step, 0, 10000, cb)
+        })
+    }
+
+    const result1 = await getBatchPromise()
+    await sleep(2000)
+    const result2 = await getPrecedentsPromise()
+    await sleep(2000)
+    //console.log(`[getBatch] Result: ${JSON.stringify(result1)}`)
+    console.log(`[getBatch] Result: ${JSON.stringify(result2)}`)
+    return {
+        result1,
+        result2
+    };
 }
 /// End service methods
 
@@ -150,6 +222,16 @@ app.post('/chain', json, async function (req, res) {
         account
     )
         .then(result => {
+            if (!db.contracts) {
+                db.contracts = {}
+            }
+            if (!db.contracts[account]) {
+                db.contracts[account] = []
+            }
+            db.contracts[account].push(result.message)
+            return result
+        })
+        .then(result => {
             return {
                 success: true,
                 address: result.message
@@ -165,6 +247,16 @@ app.post('/chain', json, async function (req, res) {
     res
         .status(result.success ? 201 : 500)
         .send(JSON.stringify(result));
+});
+
+app.get('/chain', json, async function (req, res) {
+    const account = req.get('X-Account');
+
+    if (db.contracts && db.contracts[account]) {
+        res.send(JSON.stringify(db.contracts[account]))
+    } else {
+        res.send(JSON.stringify([]))
+    }
 });
 
 // See example in examples/add_user_to_role.json
@@ -216,6 +308,36 @@ app.post('/chain/:chainId/batch', json, async function (req, res) {
             return {
                 success: true,
                 id: result["0"]
+            }
+        })
+        .catch(reason => {
+            return {
+                success: false,
+                reason
+            }
+        });
+
+    res
+        .status(result.success ? 200 : 500)
+        .send(JSON.stringify(result));
+});
+
+// See example in examples/new_batch.json
+app.get('/chain/:chainId/step/:stepId', json, async function (req, res) {
+    const address = req.params.chainId
+    const step    = req.params.stepId
+    const account = req.get('X-Account');
+
+    const result = await getBatch(
+        step,
+        account,
+        address
+    )
+        .then(result => {
+            return {
+                success: true,
+                id: result["result1"]["0"],
+                precedents: result["result2"]["0"],
             }
         })
         .catch(reason => {
