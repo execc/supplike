@@ -1,12 +1,19 @@
-import React, { Component, useState } from "react";
-import { Alert, Button, TextInput, View, StyleSheet } from "react-native";
+import React, { useState } from "react";
+import { Button, TextInput, StyleSheet } from "react-native";
+import { Text, View } from "../components/Themed";
 
-export default function LoginForm() {
+type LoginFormProps = {
+  onLogin: (username: string, password: string) => boolean;
+};
+
+export default function LoginForm({ onLogin }: LoginFormProps) {
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
 
   const handleLogin = () => {
-    Alert.alert("Credentials", `${username} + ${password}`);
+    const successLogin = onLogin(username, password);
+    setMessage(successLogin ? "" : "Try again");
   };
 
   return (
@@ -24,12 +31,12 @@ export default function LoginForm() {
         secureTextEntry={true}
         style={styles.input}
       />
-
       <Button
         disabled={!username || !password}
         title={"Login"}
         onPress={handleLogin}
       />
+      <Text style={styles.message}>{message}</Text>
     </View>
   );
 }
@@ -52,5 +59,8 @@ const styles = StyleSheet.create({
     width: 200,
     height: 44,
     padding: 10,
+  },
+  message: {
+    color: "#a00",
   },
 });
