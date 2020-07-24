@@ -27,14 +27,19 @@ export const Contract = ({
   const renderProduct = ({ id, title }: Product) => {
     return (
       <View style={styles.listItem} key={id}>
-        <Button title={title} onPress={handleSelectContractFactory(id)} />
+        <Button
+          title={`Scan ${title}`}
+          onPress={handleSelectContractFactory(id)}
+        />
       </View>
     );
   };
 
   return (
     <View style={styles.contractContainer}>
-      <Button title="Go back" onPress={onBack} />
+      <View style={styles.backWrapper}>
+        <Button title="Go back" onPress={onBack} />
+      </View>
       <View style={styles.productsContainer}>
         {contract.products ? (
           contract.products.map(renderProduct)
@@ -59,6 +64,9 @@ const styles = StyleSheet.create({
   },
   listItem: {
     width: "100%",
+    padding: 10,
+  },
+  backWrapper: {
     padding: 10,
   },
 });

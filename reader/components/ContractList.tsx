@@ -13,7 +13,6 @@ export const ContractList = ({
   onSelectContract,
   contracts,
 }: ContractListProps) => {
-  console.log(contracts);
   const handleSelectContractFactory = (contractId: string) => () =>
     onSelectContract(contractId);
 

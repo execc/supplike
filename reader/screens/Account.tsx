@@ -7,8 +7,6 @@ import { accounts, STORAGE_KEY } from "../config";
 import { ContractList } from "../components/ContractList";
 import { Contract, Product } from "../components/Contract";
 import {
-  getContractById,
-  Chain,
   ChainTransitionsInfo,
   Contract as ContractType,
   getContractList,
