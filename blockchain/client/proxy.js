@@ -384,7 +384,7 @@ app.post('/chain/:chainId/roles', json, async function (req, res) {
 
     const { role, userAddress } = req.body;
 
-    if (!account && userAddress) {
+    if (userAddress) {
         account = accountByAddress(userAddress);
     }
 
@@ -408,7 +408,9 @@ app.post('/chain/:chainId/roles', json, async function (req, res) {
             if (!db.contracts[account]) {
                 db.contracts[account] = []
             }
-            db.contracts[account].push(address)
+            if (!db.contracts[account].includes(address)) {
+                db.contracts[account].push(address)
+            }
             return result;
         })
         .then(result => {
