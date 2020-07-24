@@ -71,6 +71,16 @@ export const getContractById = (id: string): Promise<Contract> => {
   return axios(options).then((res: any) => getContractFromChain(id, res.data));
 };
 
+export const creatrButch = (chainId: string): Promise<void> => {
+  const options = {
+    method: "post",
+    url: `${SERVER}/chain/${chainId}/batch`,
+    headers,
+  };
+
+  return axios(options).then((res: any) => res.data);
+};
+
 const getContractFromChain = (
   id: string,
   { roles, steps, transitions, meta }: Chain

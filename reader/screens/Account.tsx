@@ -11,6 +11,7 @@ import {
   Contract as ContractType,
   getContractList,
 } from "../service";
+import { SCANNED_DATA_STORAGE_KEY } from "./Scanner";
 
 type AccountDetails = {
   password: string;
@@ -40,6 +41,7 @@ export default function Account({ navigation }: any) {
       if (account) {
         const contracts: ContractType[] = await getContractList();
         setContracts(contracts);
+        setSelectedContractId(null);
       }
     })();
   }, [account]);
@@ -74,13 +76,15 @@ export default function Account({ navigation }: any) {
       (products, { id, transitions }): Product[] => {
         if (!transitions.length) {
           products.push({
-            id: Math.random().toString(),
+            id,
+            stepId: id,
             title: productsTitle[id - 1] || "Your product",
           });
         } else {
           products = products.concat(
             transitions.map(({ from }: ChainTransitionsInfo) => ({
-              id: Math.random().toString(),
+              id: from,
+              stepId: id,
               title: productsTitle[from - 1] || `Product №${from}`,
             }))
           );
@@ -123,18 +127,19 @@ export default function Account({ navigation }: any) {
     }
   };
 
-  const handleSelectProduct = (productId: string) => {
+  const handleSelectProduct = (id: number) => {
     const params = {
       scan: contracts
         .find(({ id }) => selectedContractId === id)
-        ?.products?.find(({ id }) => id === productId),
+        ?.products?.find((product) => product.id === id),
     };
     navigation.push("Scanner", params);
     navigation.navigate("Scanner", params);
   };
 
-  const handleRemoveSelectedContract = () => {
+  const handleRemoveSelectedContract = async () => {
     setSelectedContractId(null);
+    await AsyncStorage.setItem(SCANNED_DATA_STORAGE_KEY, JSON.stringify({}));
   };
 
   const renderAccountInfo = () => (
