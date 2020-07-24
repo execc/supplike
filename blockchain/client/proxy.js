@@ -1,7 +1,8 @@
 const SupplyChainSimple = require('./bytecode/SupplyChainSimple.json')
 const Likelib = require('./likelib')
+const ipfsClient = require('ipfs-http-client')
+const ipfs = ipfsClient('/ip4/84.201.165.26/tcp/5001')
 
-// const lk = () => new Likelib('ws://84.201.165.26:50053')
 
 const env = {
     yc: {
@@ -524,11 +525,20 @@ app.get('/chain/:chainId/step/:stepId', json, async function (req, res) {
         account,
         address
     )
-        .then(result => {
-            var sensors;
-            if (db.sensor && db.sensor[address] && db.sensor[address][step]) {
-                sensors = db.sensor[address][step]
-            }
+        .then(async result => {
+            const sensors = []
+            for await (const file of ipfs.files.ls(`/${address}_${step}`)) {
+                const path = `/${address}_${step}/${file.name}`
+                console.log(`Reading from ipfs ${path}`)
+                const chunks = []
+               for await (const chunk of ipfs.files.read(path)) {
+                    chunks.push(chunk)
+                }
+                const content = Buffer.concat(chunks).toString()
+                console.log(`Read ${content}`)
+                sensors.push(JSON.parse(content))
+              }
+
             return {
                 success: true,
                 id: result["result1"]["0"],
@@ -557,36 +567,46 @@ app.post('/chain/:chainId/sensor', json, async function (req, res) {
     // TODO: Write sensor data to IPFS
     //
     const result = await getLastStep(id, account, address)
-        .then(result => {
+        .then(async result => {
             const stepId = result["0"]
             // Attach sensor data to step id
 
-            if (!db.sensor) {
-                db.sensor = {}
-            }
-            if (!db.sensor[address]) {
-                db.sensor[address] = {}
-            }
-            if (!db.sensor[address]) {
-                db.sensor[address] = {}
-            }
-            if (!db.sensor[address][stepId]) {
-                db.sensor[address][stepId] = []
-            }
-
-            db.sensor[address][stepId].push({
+            const dataId = new Date().getTime().toString()
+            const data = {
                 sensorId,
                 sensorType,
                 sensorValue,
+                stepId,
+                dataId,
                 date: new Date()
-            })
+            }
 
-            return result;
+            console.log(`Adding content ${JSON.stringify(data)} to IPFS`)
+
+            const resultipfs = await ipfs.files.write(
+                `/${address}_${stepId}/${dataId}.dat`,
+                JSON.stringify(data),
+                {
+                    create: true,
+                    parents: true
+                }
+            )
+            console.log(`Success adding content to IPFS ${JSON.stringify(resultipfs)}`)
+
+            //db.sensor[address][stepId].push()
+
+            return {
+                ...result,
+                ...resultipfs
+            };
         })
         .then(result => {
             return {
                 success: true,
-                step: result["0"]
+                step: result["0"],
+                path: result["path"],
+
+
             }
         })
         .catch(reason => {
