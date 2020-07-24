@@ -40,6 +40,7 @@ export const Contract = ({
       <View style={styles.backWrapper}>
         <Button title="Go back" onPress={onBack} />
       </View>
+      <Text style={styles.title}>Select product</Text>
       <View style={styles.productsContainer}>
         {contract.products ? (
           contract.products.map(renderProduct)
@@ -68,5 +69,8 @@ const styles = StyleSheet.create({
   },
   backWrapper: {
     padding: 10,
+  },
+  title: {
+    fontSize: 20,
   },
 });

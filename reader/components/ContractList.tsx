@@ -26,6 +26,7 @@ export const ContractList = ({
 
   return (
     <View style={styles.contractListContainer}>
+      <Text style={styles.title}>Select contract</Text>
       {contracts.length ? (
         contracts.map(renderContract)
       ) : (
@@ -42,6 +43,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     width: "100%",
+  },
+  title: {
+    fontSize: 20
   },
   emptyListContainer: {
     flex: 1,
