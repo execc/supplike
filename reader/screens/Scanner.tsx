@@ -7,7 +7,15 @@ import { useState, useEffect } from "react";
 import { ScanResults } from "../components/ScanResults";
 import { BarCodeScanningResult } from "expo-camera";
 
-export default function Scanner({ navigation: { addListener } }: any) {
+type ScanType = "product" | string;
+
+export default function Scanner({
+  route: { params },
+  navigation: { addListener },
+}: any) {
+  const [scanType] = useState<ScanType>(
+    (params && params.scan.title) || "product"
+  );
   const [focused, setFocused] = useState<boolean>(false);
   let focusListener: any;
   let blurListener: any;
@@ -40,39 +48,54 @@ export default function Scanner({ navigation: { addListener } }: any) {
       data = JSON.parse(scannedData);
     } catch (e) {}
 
-    return (
-      <View
-        style={{
-          flex: 1,
-          flexDirection: "column",
-          justifyContent: "flex-end",
-        }}
-      >
-        {data ? (
-          <ScanResults data={data} />
-        ) : (
-          <View
-            style={{
-              flex: 1,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            <Text>Read data error</Text>
-          </View>
-        )}
-        <Button title={"Tap to Scan Again"} onPress={() => setScanned(false)} />
-      </View>
-    );
+    if (scanType === "product") {
+      return (
+        <View
+          style={{
+            flex: 1,
+            flexDirection: "column",
+            justifyContent: "flex-end",
+          }}
+        >
+          {data ? (
+            <ScanResults data={data} />
+          ) : (
+            <View
+              style={{
+                flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Text>Read data error</Text>
+            </View>
+          )}
+          <Button
+            title={"Tap to Scan Again"}
+            onPress={() => setScanned(false)}
+          />
+        </View>
+      );
+    }
   }
 
-  return <BarScanner handleBarCodeScanned={handleBarCodeScanned} />;
+  return (
+    <View style={styles.container}>
+      <View style={styles.scanInfoContainer}>
+        <Text>Scan a {scanType}</Text>
+      </View>
+      <BarScanner handleBarCodeScanned={handleBarCodeScanned} />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scanInfoContainer: {
+    width: "100%",
     alignItems: "center",
-    justifyContent: "center",
+    padding: 10,
   },
 });
