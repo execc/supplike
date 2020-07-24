@@ -49,11 +49,21 @@ export default function Account({ navigation }: any) {
     string | null
   >(null);
 
-  const getProducts = async (contractId: string): Promise<Product[]> => {
+  const getProducts = (contractId: string): Product[] => {
     const contract: ContractType = contracts.find(
       ({ id }) => id === contractId
     )!;
     const { role } = accounts[account!];
+
+    const {
+      model: {
+        layers: [links, nodes],
+      },
+    } = contract;
+
+    const productsTitle: string[] = Object.values(nodes.models).map(
+      ({ title }: any) => title
+    );
 
     const steps = contract.steps.filter((step) => step.role === role);
     const stepsTransitions = steps.map(({ id }) => ({
@@ -65,13 +75,13 @@ export default function Account({ navigation }: any) {
         if (!transitions.length) {
           products.push({
             id: Math.random().toString(),
-            title: "Your product",
+            title: productsTitle[id - 1] || "Your product",
           });
         } else {
           products = products.concat(
             transitions.map(({ from }: ChainTransitionsInfo) => ({
               id: Math.random().toString(),
-              title: `Product №${from}`,
+              title: productsTitle[from - 1] || `Product №${from}`,
             }))
           );
         }
@@ -84,7 +94,6 @@ export default function Account({ navigation }: any) {
     const newContracts = [...contracts];
     const updatedContract = newContracts.find(({ id }) => id === contractId)!;
     updatedContract.products = products;
-    console.log(newContracts);
     setContracts(newContracts);
 
     return products;

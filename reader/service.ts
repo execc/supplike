@@ -35,6 +35,7 @@ export type Contract = {
   steps: ChainStepsInfo[];
   transitions: ChainTransitionsInfo[];
   products?: Product[];
+  model: any;
 };
 
 const headers = {
@@ -73,10 +74,17 @@ export const getContractById = (id: string): Promise<Contract> => {
 const getContractFromChain = (
   id: string,
   { roles, steps, transitions, meta }: Chain
-): Contract => ({
-  id,
-  title: JSON.parse(meta).title || "", // Костыль из-за того, что уже есть контракт без title
-  roles,
-  steps,
-  transitions,
-});
+): Contract => {
+  const {
+    title = "", // Костыль из-за того, что уже есть контракт без title
+    model,
+  } = JSON.parse(meta);
+  return {
+    id,
+    title,
+    roles,
+    steps,
+    transitions,
+    model,
+  };
+};
