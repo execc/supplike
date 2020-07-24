@@ -99,6 +99,7 @@ export const AttributeEditor = ({ id, onOpenList }: AttributeEditorProps) => {
       ...keys,
       [editId]: publicKey,
     });
+
     handleEditOff();
   };
 
@@ -107,6 +108,7 @@ export const AttributeEditor = ({ id, onOpenList }: AttributeEditorProps) => {
 
   const handlePublish = () => {
     setPublicKeys(id, keys);
+    onOpenList();
   };
 
   if (!contract) {
@@ -137,7 +139,7 @@ export const AttributeEditor = ({ id, onOpenList }: AttributeEditorProps) => {
             onClick={handlePublish}
             disabled={
               !Object.values(models).every((nodes: any[]) =>
-                nodes.every(({ id }) => keys[id])
+                nodes.every(({ roleId }) => keys[roleId])
               )
             }
             title="publish"
@@ -156,7 +158,7 @@ export const AttributeEditor = ({ id, onOpenList }: AttributeEditorProps) => {
                 <List component="div" disablePadding>
                   {models[type].map((model) => (
                     <ListItem className={classes.nested}>
-                      {editId === model.id ? (
+                      {editId === model.roleId ? (
                         <>
                           <TextField
                             className={classes.publicKeyInput}
@@ -184,11 +186,11 @@ export const AttributeEditor = ({ id, onOpenList }: AttributeEditorProps) => {
                         <>
                           <ListItemText
                             primary={model.title}
-                            secondary={keys[model.id]}
+                            secondary={keys[model.roleId]}
                           />
                           <ListItemSecondaryAction>
                             <IconButton
-                              onClick={handleEditOnFactory(model.id)}
+                              onClick={handleEditOnFactory(model.roleId)}
                               title="edit"
                             >
                               <EditIcon />

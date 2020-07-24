@@ -11,6 +11,8 @@ import {
   createChain,
   getChainIdList,
   getChainById,
+  RoleConfig,
+  assignUsers,
 } from "../service";
 
 export const CONTRACTS_KEY = "CONTRACT_LIST";
@@ -87,10 +89,19 @@ export const deleteContract = (id: string) => {
 };
 
 export const setPublicKeys = (id: string, keys: ContractKeys) => {
-  const contracts = getDraftContractsList();
-  const contract = contracts.find((contract: Contract) => contract.id === id);
-  contract.keys = keys;
-  setDraftContractsList(contracts);
+  assignUsers(
+    id,
+    Object.keys(keys).map(
+      (roleId: string): RoleConfig => ({
+        role: Number(roleId),
+        userAddress: keys[roleId],
+      })
+    )
+  );
+  // const contracts = getDraftContractsList();
+  // const contract = contracts.find((contract: Contract) => contract.id === id);
+  // contract.keys = keys;
+  // setDraftContractsList(contracts);
 };
 
 type ChainRolesInfoWithNodeId = ChainRolesInfo & {
@@ -98,16 +109,26 @@ type ChainRolesInfoWithNodeId = ChainRolesInfo & {
 };
 
 const chainToContract = (id: string, chain: Chain): Contract => {
-  const { meta } = chain;
+  try {
+    // костыль для контрактов созданных вне редактора
+    const { meta } = chain;
 
-  const { title, model } = JSON.parse(meta);
+    const { title, model } = JSON.parse(meta);
 
-  return {
-    id,
-    title,
-    data: model,
-    status: "published",
-  };
+    return {
+      id,
+      title,
+      data: model,
+      status: "published",
+    };
+  } catch (e) {
+    return {
+      id,
+      title: "trash",
+      data: {},
+      status: "published",
+    };
+  }
 };
 
 const contractToChain = (contract: Contract): Chain => {
@@ -123,11 +144,16 @@ const contractToChain = (contract: Contract): Chain => {
       ({ nodeType }) => nodeType === "factorier" || nodeType === "supplier"
     )
     .map(
-      ({ title, id }, index): ChainRolesInfoWithNodeId => ({
-        id: index + 1,
-        name: title,
-        nodeId: id,
-      })
+      (model: any, index): ChainRolesInfoWithNodeId => {
+        const { title, id } = model;
+        model.roleId = index + 1;
+
+        return {
+          id: index + 1,
+          name: title,
+          nodeId: id,
+        };
+      }
     );
 
   const steps: ChainStepsInfo[] = roles.map(

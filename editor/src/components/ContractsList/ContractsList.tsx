@@ -31,7 +31,7 @@ export type ContractStatus = "draft" | "published";
 
 export type ContractData = any;
 
-export type ContractKeys = { [id: string]: string };
+export type ContractKeys = { [roleId: number]: string };
 
 export type Contract = {
   id: string;
