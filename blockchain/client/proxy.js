@@ -36,7 +36,6 @@ const db = {
 
 }
 //
-
 var groupBy = function(xs, key) {
     return xs.reduce(function(rv, x) {
       (rv[x[key]] = rv[x[key]] || []).push(x);
@@ -51,6 +50,23 @@ const accounts = {
     user2: new Likelib.Account(env[currentEnv].user2),
     user3: new Likelib.Account(env[currentEnv].user3)
 }
+
+Object.entries(accounts).forEach(([key, value]) => {
+    console.log(`Address [${key}] = ${value._address}`)
+})
+
+const accountByAddress = (address) => {
+    if (accounts.user1._address === address) {
+        return 'user1'
+    }
+    if (accounts.user2._address === address) {
+        return 'user2'
+    }
+    if (accounts.user3._address === address) {
+        return 'user3'
+    }
+}
+
 
 /// Internal functions
 function sleep(ms) {
@@ -228,6 +244,33 @@ const getBatch = async (step, account, address) => {
         result2
     };
 }
+
+const getLastStep = async (id, account, address) => {
+    const contract = Likelib.Contract.deployed(
+        lk(),
+        accounts[account],
+        SupplyChainSimple.abi,
+        address
+    )
+
+    const getLastStepPromise = () => {
+        return new Promise((resolve, reject) => {
+            const cb = (err, result) => {
+                if (err) {
+                    return reject(err)
+                } else {
+                    resolve(result)
+                }
+            }
+            contract.getLastStep(id, 0, 10000, cb)
+        })
+    }
+
+    const result = await getLastStepPromise()
+    await sleep(2000)
+    console.log(`[getLastStep] Result: ${JSON.stringify(result)}`)
+    return result
+}
 /// End service methods
 
 /// Http API
@@ -304,26 +347,69 @@ app.get('/chain/:chainId', json, async function (req, res) {
 
 app.get('/chain/:chainId/step', json, async function (req, res) {
     const address = req.params.chainId
+    const id = req.query.id
 
-    if (db.steps && db.steps[address]) {
-        res.send(JSON.stringify(db.steps[address]))
+    if (id) {
+        const result = await getLastStep(id, 'admin', address)
+        .then(result => {
+            return {
+                success: true,
+                step: result["0"]
+            }
+        })
+        .catch(reason => {
+            return {
+                success: false,
+                reason
+            }
+        });
+
+        res
+            .status(result.success ? 200 : 500)
+            .send(JSON.stringify(result));
     } else {
-        res.send(JSON.stringify([]))
+        if (db.steps && db.steps[address]) {
+            res.send(JSON.stringify(db.steps[address]))
+        } else {
+            res.send(JSON.stringify([]))
+        }
     }
 });
 
 // See example in examples/add_user_to_role.json
 app.post('/chain/:chainId/roles', json, async function (req, res) {
     const address = req.params.chainId
-    const account = req.get('X-Account');
+    var account = req.get('X-Account');
 
-    const { role } = req.body;
+    const { role, userAddress } = req.body;
+
+    if (!account && userAddress) {
+        account = accountByAddress(userAddress);
+    }
 
     const result = await addUserToRole(
         role, 
         account, 
         address
     )
+        .then(result => {
+            if (!db.roles) {
+                db.roles = {}
+            }
+            if (!db.roles[address]) {
+                db.roles[address] = {}
+            }
+            db.roles[address][account] = role
+
+            if (!db.contracts) {
+                db.contracts = {}
+            }
+            if (!db.contracts[account]) {
+                db.contracts[account] = []
+            }
+            db.contracts[account].push(address)
+            return result;
+        })
         .then(result => {
             return {
                 success: true,
@@ -339,6 +425,19 @@ app.post('/chain/:chainId/roles', json, async function (req, res) {
 
     res
         .status(result.success ? 200 : 500)
+        .send(JSON.stringify(result));
+});
+
+app.get('/chain/:chainId/roles', json, async function (req, res) {
+    const address = req.params.chainId
+
+    var result = {}
+    if (db.roles && db.roles[address]) {
+        result = db.roles[address]
+    }
+
+    res
+        .status(result)
         .send(JSON.stringify(result));
 });
 
@@ -362,7 +461,7 @@ app.post('/chain/:chainId/batch', json, async function (req, res) {
                 db.steps = {}
             }
             if (!db.steps[address]) {
-                db.steps[address] = {}
+                db.steps[address] = []
             }
             db.steps[address].push({
                 id,
@@ -426,15 +525,73 @@ app.get('/chain/:chainId/step/:stepId', json, async function (req, res) {
         address
     )
         .then(result => {
+            var sensors;
+            if (db.sensor && db.sensor[address] && db.sensor[address][step]) {
+                sensors = db.sensor[address][step]
+            }
             return {
                 success: true,
                 id: result["result1"]["0"],
                 precedents: result["result2"]["0"],
+                sensors
             }
         })
         .catch(reason => {
             return {
                 success: false,
+                reason
+            }
+        });
+
+    res
+        .status(result.success ? 200 : 500)
+        .send(JSON.stringify(result));
+});
+
+app.post('/chain/:chainId/sensor', json, async function (req, res) {
+    const address = req.params.chainId
+    const account = 'admin'
+    const { id, sensorId, sensorType, sensorValue } = req.body
+    
+
+    // TODO: Write sensor data to IPFS
+    //
+    const result = await getLastStep(id, account, address)
+        .then(result => {
+            const stepId = result["0"]
+            // Attach sensor data to step id
+
+            if (!db.sensor) {
+                db.sensor = {}
+            }
+            if (!db.sensor[address]) {
+                db.sensor[address] = {}
+            }
+            if (!db.sensor[address]) {
+                db.sensor[address] = {}
+            }
+            if (!db.sensor[address][stepId]) {
+                db.sensor[address][stepId] = []
+            }
+
+            db.sensor[address][stepId].push({
+                sensorId,
+                sensorType,
+                sensorValue,
+                date: new Date()
+            })
+
+            return result;
+        })
+        .then(result => {
+            return {
+                success: true,
+                step: result["0"]
+            }
+        })
+        .catch(reason => {
+            return {
+                success: true,
                 reason
             }
         });

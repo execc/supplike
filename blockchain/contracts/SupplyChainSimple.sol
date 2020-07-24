@@ -266,6 +266,22 @@ contract SupplyChainSimple {
 
    /**
     * @notice A method to retrieve the batch info of a step.
+    * @param _id The id of the item to retrieve last step
+    * for.
+    * @return An array with the step ids of the precedent steps.
+    */
+   function getLastStep(uint256 _id)
+       public
+       /*view*/
+       returns(uint256)
+   {
+       return (
+           lastSteps[_id]
+       );
+   }
+
+   /**
+    * @notice A method to retrieve the batch info of a step.
     * @param _step The step id of the step to retrieve precedents
     * for.
     * @return An array with the step ids of the precedent steps.
