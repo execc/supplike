@@ -3,14 +3,14 @@ import { StyleSheet, Button } from "react-native";
 
 import { Text, View } from "./Themed";
 
-type Product = {
+export type Product = {
   id: string;
   title: string;
 };
 
 export type Contract = {
   id: string;
-  products: Product[];
+  products?: Product[];
 };
 
 type ContractProps = {
@@ -39,7 +39,11 @@ export const Contract = ({
     <View style={styles.contractContainer}>
       <Button title="Go back" onPress={onBack} />
       <View style={styles.productsContainer}>
-        {contract.products.map(renderProduct)}
+        {contract.products ? (
+          contract.products.map(renderProduct)
+        ) : (
+          <Text>Loading...</Text>
+        )}
       </View>
     </View>
   );

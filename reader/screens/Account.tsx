@@ -5,10 +5,17 @@ import { Text, View } from "../components/Themed";
 import LoginForm from "../components/LoginForm";
 import { accounts, STORAGE_KEY } from "../config";
 import { ContractList } from "../components/ContractList";
-import { Contract } from "../components/Contract";
+import { Contract, Product } from "../components/Contract";
+import {
+  getChainIdList,
+  getChainById,
+  Chain,
+  ChainTransitionsInfo,
+} from "../service";
 
 type AccountDetails = {
   password: string;
+  role: number;
 };
 
 export type Accounts = {
@@ -16,31 +23,6 @@ export type Accounts = {
 };
 
 const ACCOUNT_STORAGE_KEY = `${STORAGE_KEY}:ACOUNT`;
-
-const stubContracts = [
-  {
-    id: "1",
-    products: [
-      {
-        id: "1",
-        title: "berry",
-      },
-      {
-        id: "2",
-        title: "milk",
-      },
-    ],
-  },
-  {
-    id: "2",
-    products: [
-      {
-        id: "1",
-        title: "berry",
-      },
-    ],
-  },
-];
 
 export default function Account({ navigation }: any) {
   const [account, setAccount] = React.useState<string | null>(null);
@@ -54,12 +36,62 @@ export default function Account({ navigation }: any) {
     })();
   });
 
-  const [contracts, setContracts] = React.useState<Contract[]>(
-    stubContracts || []
-  );
+  React.useEffect(() => {
+    (async () => {
+      if (account) {
+        const chains = await getChainIdList();
+        setContracts(
+          chains.map((id: string) => ({
+            id,
+          }))
+        );
+      }
+    })();
+  }, [account]);
+
+  const [contracts, setContracts] = React.useState<Contract[]>([]);
   const [selectedContractId, setSelectedContractId] = React.useState<
     string | null
   >(null);
+
+  const getProducts = async (contractId: string): Promise<Product[]> => {
+    const chain: Chain = await getChainById(contractId);
+    const { role } = accounts[account!];
+
+    const steps = chain.steps.filter((step) => step.role === role);
+    const stepsTransitions = steps.map(({ id }) => ({
+      id,
+      transitions: chain.transitions.filter(({ to }) => to === id),
+    }));
+    const products: Product[] = stepsTransitions.reduce(
+      (products, { id, transitions }): Product[] => {
+        if (!transitions.length) {
+          products.push({
+            id: Math.random().toString(),
+            title: "Your product",
+          });
+        } else {
+          products = products.concat(
+            transitions.map(({ from }: ChainTransitionsInfo) => ({
+              id: Math.random().toString(),
+              title: `Product №${from}`,
+            }))
+          );
+        }
+
+        return products;
+      },
+      [] as Product[]
+    );
+
+    const newContracts = [...contracts];
+    const updatedContract = newContracts.find(({ id }) => id === contractId)!;
+    updatedContract.products = products;
+    console.log(newContracts);
+    setContracts(newContracts);
+
+    return products;
+  };
 
   const handleLogin = (username: string, password: string): boolean => {
     const details = accounts[username];
@@ -80,13 +112,16 @@ export default function Account({ navigation }: any) {
 
   const handleSelectContract = (contractId: string) => {
     setSelectedContractId(contractId);
+    if (!contracts.find(({ id }) => contractId === id)!.products) {
+      getProducts(contractId);
+    }
   };
 
   const handleSelectProduct = (productId: string) => {
     const params = {
-      scan: stubContracts
+      scan: contracts
         .find(({ id }) => selectedContractId === id)
-        ?.products.find(({ id }) => id === productId),
+        ?.products?.find(({ id }) => id === productId),
     };
     navigation.push("Scanner", params);
     navigation.navigate("Scanner", params);
