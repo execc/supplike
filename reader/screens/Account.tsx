@@ -7,10 +7,11 @@ import { accounts, STORAGE_KEY } from "../config";
 import { ContractList } from "../components/ContractList";
 import { Contract, Product } from "../components/Contract";
 import {
-  getChainIdList,
-  getChainById,
+  getContractById,
   Chain,
   ChainTransitionsInfo,
+  Contract as ContractType,
+  getContractList,
 } from "../service";
 
 type AccountDetails = {
@@ -39,29 +40,27 @@ export default function Account({ navigation }: any) {
   React.useEffect(() => {
     (async () => {
       if (account) {
-        const chains = await getChainIdList();
-        setContracts(
-          chains.map((id: string) => ({
-            id,
-          }))
-        );
+        const contracts: ContractType[] = await getContractList();
+        setContracts(contracts);
       }
     })();
   }, [account]);
 
-  const [contracts, setContracts] = React.useState<Contract[]>([]);
+  const [contracts, setContracts] = React.useState<ContractType[]>([]);
   const [selectedContractId, setSelectedContractId] = React.useState<
     string | null
   >(null);
 
   const getProducts = async (contractId: string): Promise<Product[]> => {
-    const chain: Chain = await getChainById(contractId);
+    const contract: ContractType = contracts.find(
+      ({ id }) => id === contractId
+    )!;
     const { role } = accounts[account!];
 
-    const steps = chain.steps.filter((step) => step.role === role);
+    const steps = contract.steps.filter((step) => step.role === role);
     const stepsTransitions = steps.map(({ id }) => ({
       id,
-      transitions: chain.transitions.filter(({ to }) => to === id),
+      transitions: contract.transitions.filter(({ to }) => to === id),
     }));
     const products: Product[] = stepsTransitions.reduce(
       (products, { id, transitions }): Product[] => {

@@ -3,18 +3,15 @@ import { StyleSheet, Button } from "react-native";
 
 import { Text, View } from "./Themed";
 
+import { Contract as ContractType } from "../service";
+
 export type Product = {
   id: string;
   title: string;
 };
 
-export type Contract = {
-  id: string;
-  products?: Product[];
-};
-
 type ContractProps = {
-  contract: Contract;
+  contract: ContractType;
   onSelectProduct: (productId: string) => void;
   onBack: () => void;
 };

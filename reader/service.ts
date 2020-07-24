@@ -1,3 +1,5 @@
+import { Product } from "./components/Contract";
+
 const axios = require("axios");
 
 const X_ACCOUNT = "admin";
@@ -26,6 +28,15 @@ export type Chain = {
   meta: string;
 };
 
+export type Contract = {
+  id: string;
+  title: string;
+  roles: ChainRolesInfo[];
+  steps: ChainStepsInfo[];
+  transitions: ChainTransitionsInfo[];
+  products?: Product[];
+};
+
 const headers = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, PUT, POST, DELETE, OPTIONS",
@@ -34,7 +45,7 @@ const headers = {
   "X-Account": X_ACCOUNT,
 };
 
-export const getChainIdList = (): string[] => {
+export const getChainIdList = (): Promise<string[]> => {
   const options = {
     method: "get",
     url: `${SERVER}/chain`,
@@ -44,12 +55,28 @@ export const getChainIdList = (): string[] => {
   return axios(options).then((res: any) => res.data);
 };
 
-export const getChainById = (id: string): Promise<Chain> => {
+export const getContractList = async (): Promise<Contract[]> => {
+  const ids = await getChainIdList();
+  return await Promise.all(ids.map(getContractById));
+};
+
+export const getContractById = (id: string): Promise<Contract> => {
   const options = {
     method: "get",
     url: `${SERVER}/chain/${id}`,
     headers,
   };
 
-  return axios(options).then((res: any) => res.data);
+  return axios(options).then((res: any) => getContractFromChain(id, res.data));
 };
+
+const getContractFromChain = (
+  id: string,
+  { roles, steps, transitions, meta }: Chain
+): Contract => ({
+  id,
+  title: JSON.parse(meta).title || "", // Костыль из-за того, что уже есть контракт без title
+  roles,
+  steps,
+  transitions,
+});
