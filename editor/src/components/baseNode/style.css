@@ -1,0 +1,155 @@
+.node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.node-preview {
+  user-select: none;
+  cursor: move;
+  margin: 10px;
+}
+
+.node-preview .content {
+  min-height: 60px;
+}
+
+.ports {
+  width: 16px;
+  display: flex;
+}
+
+.port-wrapper.half-port {
+  width: 8px;
+  height: 16px;
+  overflow: hidden;
+}
+
+.circle-port:hover {
+  background: mediumpurple;
+}
+
+.hidden-port .port {
+  display: none;
+}
+
+.port-in {
+  /* margin-left: -6px; */
+}
+
+.port-out.half-port .circle-port {
+  margin-left: -8px;
+}
+
+.circle-port {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #2a9d8f;
+  background: white;
+  cursor: pointer;
+}
+
+.pipe {
+  height: 20px;
+  width: 3px;
+  background: #2a9d8f;
+}
+
+.icon {
+  height: 30px;
+  width: 30px;
+  border: 3px solid #2a9d8f;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1;
+  background: #eee;
+}
+
+.content {
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  min-width: 100px;
+  max-width: 160px;
+  border: 3px solid #2a9d8f;
+  border-radius: 8px;
+  margin-top: -18px;
+  background: #eee;
+}
+
+.title {
+  text-align: center;
+  font-weight: bold;
+  text-transform: uppercase;
+  background: #2a9d8f;
+  padding: 14px 0 4px;
+  margin-bottom: 5px;
+}
+
+.mods {
+  padding: 0 8px;
+  flex: 1;
+}
+
+.mod {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+
+.mod:not(:last-child) {
+  margin-bottom: 6px;
+}
+
+.mod-text {
+  text-align: center;
+}
+
+.add-mod-button-wrapper {
+  margin-top: 5px;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.add-mod-button {
+  /* display: none; */
+  background: #2a9d8f;
+  border: none;
+  padding: 5px;
+  justify-content: center;
+  align-items: center;
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+}
+
+.content:hover .add-mod-button {
+  display: block;
+}
+
+.popover {
+  background: #ddd;
+  box-shadow: 2px 2px 2px #aaa;
+  margin: 0 2px;
+  padding: 8px;
+  border-radius: 8px;
+  /* color: #eee; */
+  width: 150px;
+}
+
+.save-condition-button {
+  background: #2a9d8f !important;
+}
+
+.delete-condition-button {
+  background: #fa4d4f !important;
+}
+
+.mod-form-button {
+  margin: 5px 0 !important;
+}
