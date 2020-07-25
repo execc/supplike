@@ -15,7 +15,7 @@ type ScanResultsProps = {
 };
 
 export const ScanResults = ({
-  data: { chainId, productId },
+  data: { chainId = "3HusKBq1ztk19LAa69syuwo7JZX1", productId },
 }: ScanResultsProps) => {
   const renderDetail = (rowData: TimelineData) => {
     return (
