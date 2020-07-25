@@ -5,7 +5,11 @@ import { Text, View } from "../components/Themed";
 import LoginForm from "../components/LoginForm";
 import { accounts, STORAGE_KEY } from "../config";
 import { ContractList } from "../components/ContractList";
-import { Contract, Product } from "../components/Contract";
+import {
+  Contract,
+  Product,
+  ContractCreateStatus,
+} from "../components/Contract";
 import {
   ChainTransitionsInfo,
   Contract as ContractType,
@@ -16,6 +20,7 @@ import { SCANNED_DATA_STORAGE_KEY } from "./Scanner";
 type AccountDetails = {
   password: string;
   role: number;
+  user: string;
 };
 
 export type Accounts = {
@@ -82,9 +87,13 @@ export default function Account({ navigation }: any) {
           });
         } else {
           products = products.concat(
-            transitions.map(({ from }: ChainTransitionsInfo) => ({
+            transitions.map(({ from, to }: ChainTransitionsInfo) => ({
               id: from,
               stepId: id,
+              precedentFor: {
+                id: to,
+                title: productsTitle[to - 1],
+              },
               title: productsTitle[from - 1] || `Product №${from}`,
             }))
           );
@@ -137,7 +146,21 @@ export default function Account({ navigation }: any) {
     navigation.navigate("Scanner", params);
   };
 
-  const handleRemoveSelectedContract = async () => {
+  type Message = { message: string; type: "success" | "error" };
+
+  const [message, setMessage] = React.useState<Message | null>(null);
+
+  const handleRemoveSelectedContract = async (
+    status?: ContractCreateStatus
+  ) => {
+    setMessage(
+      status === undefined
+        ? null
+        : status === "success"
+        ? { message: "Created!", type: "success" }
+        : { message: "Failed", type: "error" }
+    );
+    setTimeout(() => setMessage(null), 2000);
     setSelectedContractId(null);
     await AsyncStorage.setItem(SCANNED_DATA_STORAGE_KEY, JSON.stringify({}));
   };
@@ -147,8 +170,14 @@ export default function Account({ navigation }: any) {
       <View style={styles.greetingTextContainer}>
         <Text>Welcome back, {account}</Text>
       </View>
+      {message && (
+        <View style={styles.messageContainer}>
+          <Text>{message.message}</Text>
+        </View>
+      )}
       {selectedContractId ? (
         <Contract
+          account={account!}
           contract={contracts.find(({ id }) => id === selectedContractId)!}
           onSelectProduct={handleSelectProduct}
           onBack={handleRemoveSelectedContract}
@@ -189,6 +218,12 @@ const styles = StyleSheet.create({
     padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#999",
+  },
+  messageContainer: {
+    width: "100%",
+    alignItems: "center",
+    padding: 10,
+    backgroundColor: "#595",
   },
   button: {
     padding: 10,

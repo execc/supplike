@@ -3,19 +3,27 @@ import { StyleSheet, Button, AsyncStorage } from "react-native";
 
 import { Text, View } from "./Themed";
 
-import { Contract as ContractType } from "../service";
+import { Contract as ContractType, createProduct } from "../service";
 import { SCANNED_DATA_STORAGE_KEY } from "../screens/Scanner";
+import { accounts } from "../config";
 
 export type Product = {
   id: number;
   stepId: number;
   title: string;
+  precedentFor?: {
+    id: number;
+    title: string;
+  };
 };
 
+export type ContractCreateStatus = "success" | "fail";
+
 type ContractProps = {
+  account: string;
   contract: ContractType;
   onSelectProduct: (id: number) => void;
-  onBack: () => void;
+  onBack: (status?: ContractCreateStatus) => void;
 };
 
 type ScannedStorageData = {
@@ -23,6 +31,7 @@ type ScannedStorageData = {
 };
 
 export const Contract = ({
+  account,
   contract,
   onSelectProduct,
   onBack,
@@ -53,12 +62,36 @@ export const Contract = ({
     );
   };
 
-  const handleSendBatch = () => {};
+  const [inProccess, setInProccess] = React.useState<boolean>(false);
+
+  const handleCreateProduct = async () => {
+    const { id, products } = contract;
+    setInProccess(true);
+    console.log("create", products, scannedData);
+
+    const newProduct = await createProduct(accounts[account].user, id, {
+      quantity: 1,
+      precedents:
+        products!.length === 1
+          ? []
+          : products!.map(({ id }) => scannedData[id].productId),
+      sid: products![0].stepId,
+    });
+
+    console.log("created", newProduct);
+    setInProccess(false);
+    onBack("success");
+    // createProduct(id, {
+    //   quantity: 1,
+    //   precedents: (products.length === 1) ? [] : ,
+    //   sid: pro
+    // });
+  };
 
   return (
     <View style={styles.contractContainer}>
       <View style={styles.backWrapper}>
-        <Button title="Go back" onPress={onBack} />
+        <Button title="Go back" onPress={() => onBack()} />
       </View>
       <Text style={styles.title}>Select product for {contract.title}</Text>
       <View style={styles.productsContainer}>
@@ -69,9 +102,11 @@ export const Contract = ({
         )}
         {contract.products && (
           <Button
-            disabled={contract.products.some(({ id }) => !scannedData[id])}
-            title="Send"
-            onPress={handleSendBatch}
+            disabled={
+              contract.products.some(({ id }) => !scannedData[id]) || inProccess
+            }
+            title={inProccess ? "Creating..." : "Create product"}
+            onPress={handleCreateProduct}
           />
         )}
       </View>
