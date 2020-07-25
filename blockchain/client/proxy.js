@@ -62,6 +62,9 @@ const accounts = {
     user4: new Likelib.Account(env[currentEnv].user4),
     user5: new Likelib.Account(env[currentEnv].user5),
     user6: new Likelib.Account(env[currentEnv].user6),
+    user7: new Likelib.Account(env[currentEnv].user7),
+    user8: new Likelib.Account(env[currentEnv].user8),
+    user9: new Likelib.Account(env[currentEnv].user9),
 }
 
 Object.entries(accounts).forEach(([key, value]) => {
@@ -463,7 +466,7 @@ app.post('/chain/:chainId/batch', json, async function (req, res) {
     const address = req.params.chainId
     const account = req.get('X-Account');
 
-    const { id, precedents, quantity, sid } = req.body;
+    const { id, precedents, quantity, sid, sensorId } = req.body;
 
     const result = await newBatch(
         id,
@@ -473,7 +476,7 @@ app.post('/chain/:chainId/batch', json, async function (req, res) {
         account,
         address
     )
-        .then(result => {
+        .then(async result => {
             if (!db.steps) {
                 db.steps = {}
             }
@@ -487,7 +490,8 @@ app.post('/chain/:chainId/batch', json, async function (req, res) {
                 sid,
                 tx: result["hash"],
                 step: result["0"]
-            })
+            });
+
             return result
         })
         .then(result => {
@@ -568,6 +572,11 @@ app.get('/chain/:chainId/step/:stepId', json, async function (req, res) {
         .status(result.success ? 200 : 500)
         .send(JSON.stringify(result));
 });
+
+app.get('/chain/:chainId/sensor', json, async function (req, res) {
+    const address = req.params.chainId
+
+})
 
 app.post('/chain/:chainId/sensor', json, async function (req, res) {
     const address = req.params.chainId
