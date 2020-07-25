@@ -24,11 +24,12 @@ const saveScannedData = async (
     SCANNED_DATA_STORAGE_KEY,
     JSON.stringify(storagedData)
   );
+  console.log("scan data saved", storagedData);
 };
 
 export default function Scanner({
   route: { params },
-  navigation: { addListener, navigate },
+  navigation: { addListener, navigate, push },
 }: any) {
   const [scanType] = useState<ScanType>(
     (params && params.scan.title) || "product"
@@ -60,7 +61,7 @@ export default function Scanner({
   }
 
   if (scanned) {
-    let data;
+    let data: any;
     try {
       data = JSON.parse(scannedData);
     } catch (e) {}
@@ -109,7 +110,11 @@ export default function Scanner({
       );
     }
 
-    saveScannedData(params!.scan.id, data).then(() => navigate("Account"));
+    saveScannedData(params!.scan.stepId, data).then(() => {
+      navigate("Account", {
+        scannedData: data,
+      });
+    });
   }
 
   return (

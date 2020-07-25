@@ -19,7 +19,6 @@ import { SCANNED_DATA_STORAGE_KEY } from "./Scanner";
 
 type AccountDetails = {
   password: string;
-  role: number;
   user: string;
 };
 
@@ -29,7 +28,21 @@ export type Accounts = {
 
 const ACCOUNT_STORAGE_KEY = `${STORAGE_KEY}:ACOUNT`;
 
-export default function Account({ navigation }: any) {
+export default function Account({ navigation, route: { params } }: any) {
+  const [focused, setFocused] = React.useState<boolean>(false);
+  let focusListener: any;
+  let blurListener: any;
+
+  React.useEffect(() => {
+    focusListener = navigation.addListener("focus", () => setFocused(true));
+    blurListener = navigation.addListener("blur", () => setFocused(false));
+
+    return () => {
+      focusListener && focusListener();
+      blurListener && blurListener();
+    };
+  });
+
   const [account, setAccount] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -56,11 +69,12 @@ export default function Account({ navigation }: any) {
     string | null
   >(null);
 
-  const getProducts = (contractId: string): Product[] => {
+  const getProduct = (contractId: string): Product | null => {
     const contract: ContractType = contracts.find(
       ({ id }) => id === contractId
     )!;
-    const { role } = accounts[account!];
+    const { user } = accounts[account!];
+    const role = contract.assignedRoles[user];
 
     const {
       model: {
@@ -68,48 +82,46 @@ export default function Account({ navigation }: any) {
       },
     } = contract;
 
-    const productsTitle: string[] = Object.values(nodes.models).map(
-      ({ title }: any) => title
+    type Node = {
+      title: string;
+      nodeType: string;
+    };
+    const productsNode: Node[] = Object.values(nodes.models).map(
+      ({ title, nodeType }: any) => ({
+        title,
+        nodeType,
+      })
     );
 
-    const steps = contract.steps.filter((step) => step.role === role);
-    const stepsTransitions = steps.map(({ id }) => ({
-      id,
-      transitions: contract.transitions.filter(({ to }) => to === id),
-    }));
-    const products: Product[] = stepsTransitions.reduce(
-      (products, { id, transitions }): Product[] => {
-        if (!transitions.length) {
-          products.push({
-            id,
-            stepId: id,
-            title: productsTitle[id - 1] || "Your product",
-          });
-        } else {
-          products = products.concat(
-            transitions.map(({ from, to }: ChainTransitionsInfo) => ({
-              id: from,
-              stepId: id,
-              precedentFor: {
-                id: to,
-                title: productsTitle[to - 1],
-              },
-              title: productsTitle[from - 1] || `Product №${from}`,
-            }))
-          );
-        }
+    let product: Product | null = null;
+    const step = contract.steps.find((step) => step.role === role);
+    if (step) {
+      const transitions = contract.transitions.filter(
+        ({ to }) => to === step.id
+      );
 
-        return products;
-      },
-      [] as Product[]
-    );
+      const node = productsNode[step.id - 1];
 
-    const newContracts = [...contracts];
-    const updatedContract = newContracts.find(({ id }) => id === contractId)!;
-    updatedContract.products = products;
-    setContracts(newContracts);
+      product = {
+        // id: step.id,
+        stepId: step.id,
+        type: node.nodeType === "link" ? "transfer" : "product",
+        title: node.title || "Your product",
+        precedents: transitions.map(({ from }) => ({
+          stepId: from,
+          title: productsNode[from - 1].title || `Product №${from}`,
+        })),
+      };
+    }
 
-    return products;
+    if (product) {
+      const newContracts = [...contracts];
+      const updatedContract = newContracts.find(({ id }) => id === contractId)!;
+      updatedContract.product = product;
+      setContracts(newContracts);
+    }
+
+    return product;
   };
 
   const handleLogin = (username: string, password: string): boolean => {
@@ -131,16 +143,20 @@ export default function Account({ navigation }: any) {
 
   const handleSelectContract = (contractId: string) => {
     setSelectedContractId(contractId);
-    if (!contracts.find(({ id }) => contractId === id)!.products) {
-      getProducts(contractId);
+    if (!contracts.find(({ id }) => contractId === id)!.product) {
+      getProduct(contractId);
     }
   };
 
-  const handleSelectProduct = (id: number) => {
+  const handleSelectProduct = (stepId: number) => {
+    const product = contracts.find(({ id }) => selectedContractId === id)!
+      .product!;
+    const productInfo =
+      product.stepId === stepId
+        ? product
+        : product.precedents.find((product) => product.stepId === stepId);
     const params = {
-      scan: contracts
-        .find(({ id }) => selectedContractId === id)
-        ?.products?.find((product) => product.id === id),
+      scan: productInfo,
     };
     navigation.push("Scanner", params);
     navigation.navigate("Scanner", params);
@@ -193,6 +209,10 @@ export default function Account({ navigation }: any) {
       </View>
     </View>
   );
+
+  if (!focused) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>

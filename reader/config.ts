@@ -3,19 +3,32 @@ import { Accounts } from "./screens/Account";
 export const STORAGE_KEY = "supplike_reader";
 
 export const accounts: Accounts = {
-  milk: {
+  milk_s: {
     password: "milk",
-    role: 1,
     user: "user1",
   },
-  berry: {
-    password: "berry",
-    role: 2,
+  milk_t: {
+    password: "milk",
     user: "user2",
   },
-  yogurt: {
-    password: "yogurt",
-    role: 3,
+  berry_s: {
+    password: "berry",
     user: "user3",
+  },
+  berry_t: {
+    password: "berry",
+    user: "user4",
+  },
+  yogurt_f: {
+    password: "yogurt",
+    user: "user5",
+  },
+  yogurt_t: {
+    password: "yogurt",
+    user: "user6",
+  },
+  store: {
+    password: "store",
+    user: "user7",
   },
 };

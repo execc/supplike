@@ -8,13 +8,14 @@ import { SCANNED_DATA_STORAGE_KEY } from "../screens/Scanner";
 import { accounts } from "../config";
 
 export type Product = {
-  id: number;
+  // id: number;
+  type: "component" | "product" | "transfer";
   stepId: number;
   title: string;
-  precedentFor?: {
-    id: number;
+  precedents: {
+    stepId: number;
     title: string;
-  };
+  }[];
 };
 
 export type ContractCreateStatus = "success" | "fail";
@@ -40,42 +41,65 @@ export const Contract = ({
 
   (async () => {
     const data = await AsyncStorage.getItem(SCANNED_DATA_STORAGE_KEY);
-    setScannedData(JSON.parse(data || "{}"));
+    console.log("load stored scan data", data, "previous", scannedData);
+    if (data !== JSON.stringify(scannedData)) {
+      setScannedData(JSON.parse(data || "{}"));
+    }
   })();
 
-  const handleSelectProductFactory = (id: number) => () => onSelectProduct(id);
+  const handleSelectProductFactory = (id: number) => () => {
+    console.log("select product to scan", id);
+    onSelectProduct(id);
+  };
 
-  const renderProduct = ({ id, title }: Product) => {
+  type ItemToScanInfo = {
+    stepId: number;
+    title: string;
+  };
+
+  const renderItemToScan = ({ stepId, title }: ItemToScanInfo) => {
+    console.log("item to scan", stepId, title);
     return (
-      <View style={styles.listItem} key={id}>
-        {scannedData[id] ? (
+      <View style={styles.listItem} key={stepId}>
+        {scannedData[stepId] ? (
           <Text>
-            Scanned {title}: {scannedData[id].productId}
+            Scanned {title}: {scannedData[stepId].productId}
           </Text>
         ) : (
           <Button
             title={`Scan ${title}`}
-            onPress={handleSelectProductFactory(id)}
+            onPress={handleSelectProductFactory(stepId)}
           />
         )}
       </View>
     );
   };
 
+  const renderProduct = (product: Product) => {
+    return [
+      ...product.precedents.map(renderItemToScan),
+      product.type !== "transfer" && renderItemToScan(product),
+    ];
+  };
+
   const [inProccess, setInProccess] = React.useState<boolean>(false);
 
   const handleCreateProduct = async () => {
-    const { id, products } = contract;
+    const { id, product } = contract;
     setInProccess(true);
-    console.log("create", products, scannedData);
+    console.log("create", product, scannedData);
 
     const newProduct = await createProduct(accounts[account].user, id, {
+      id:
+        product!.type === "transfer"
+          ? scannedData[product!.precedents[0].stepId].productId
+          : scannedData[product!.stepId].productId,
       quantity: 1,
-      precedents:
-        products!.length === 1
-          ? []
-          : products!.map(({ id }) => scannedData[id].productId),
-      sid: products![0].stepId,
+      precedents: product!.precedents.map(({ stepId }) => ({
+        stepId,
+        productId: scannedData[stepId].productId,
+      })),
+      sid: product!.stepId,
     });
 
     console.log("created", newProduct);
@@ -88,6 +112,8 @@ export const Contract = ({
     // });
   };
 
+  console.log("contract", contract.product, scannedData);
+
   return (
     <View style={styles.contractContainer}>
       <View style={styles.backWrapper}>
@@ -95,17 +121,25 @@ export const Contract = ({
       </View>
       <Text style={styles.title}>Select product for {contract.title}</Text>
       <View style={styles.productsContainer}>
-        {contract.products ? (
-          contract.products.map(renderProduct)
+        {contract.product ? (
+          renderProduct(contract.product)
         ) : (
           <Text>Loading...</Text>
         )}
-        {contract.products && (
+        {contract.product && (
           <Button
             disabled={
-              contract.products.some(({ id }) => !scannedData[id]) || inProccess
+              contract.product.precedents.some(
+                ({ stepId }) => !scannedData[stepId]
+              ) || inProccess
             }
-            title={inProccess ? "Creating..." : "Create product"}
+            title={
+              inProccess
+                ? "Creating..."
+                : contract.product.type === "transfer"
+                ? "Confirm transfer"
+                : "Create product"
+            }
             onPress={handleCreateProduct}
           />
         )}

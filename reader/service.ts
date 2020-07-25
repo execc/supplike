@@ -34,8 +34,9 @@ export type Contract = {
   roles: ChainRolesInfo[];
   steps: ChainStepsInfo[];
   transitions: ChainTransitionsInfo[];
-  products?: Product[];
+  product?: Product;
   model: any;
+  assignedRoles: AssignedRoles;
 };
 
 const headers = (account: string = X_ACCOUNT) => ({
@@ -61,14 +62,40 @@ export const getContractList = async (): Promise<Contract[]> => {
   return await Promise.all(ids.map(getContractById));
 };
 
-export const getContractById = (id: string): Promise<Contract> => {
+export const getContractById = async (id: string): Promise<Contract> => {
+  const data = await Promise.all([getChainById(id), getAssignedRoles(id)]);
+
+  return getContractFromChain(id, data[0], data[1]);
+};
+
+export const getChainById = (chainId: string): Promise<Chain> => {
   const options = {
     method: "get",
-    url: `${SERVER}/chain/${id}`,
+    url: `${SERVER}/chain/${chainId}`,
     headers: headers(),
   };
 
-  return axios(options).then((res: any) => getContractFromChain(id, res.data));
+  return axios(options).then((res: any) => res.data);
+};
+
+/**
+ * {
+ *  [username]: roleId
+ *  user1: 1
+ * }
+ */
+type AssignedRoles = {
+  [user: string]: number;
+};
+
+export const getAssignedRoles = (chainId: string): Promise<AssignedRoles> => {
+  const options = {
+    method: "get",
+    url: `${SERVER}/chain/${chainId}/roles`,
+    headers: headers(),
+  };
+
+  return axios(options).then((res: any) => res.data);
 };
 
 export const createProduct = async (
@@ -81,9 +108,21 @@ export const createProduct = async (
     ? productInfo.id
     : await getNextProductIdForStep(chainId, productInfo.sid);
 
+  const steps = await getSteps(chainId);
+  console.log("get steps for create new product", steps);
+  const precedents: number[] = productInfo.precedents.map(
+    ({ stepId, productId }) => {
+      const product = steps.find(
+        ({ id, sid }) => id === productId && sid === stepId
+      );
+      return Number(product!.step);
+    }
+  );
+
   const data: StepInput = {
     id,
     ...productInfo,
+    precedents,
   };
 
   console.log("creating product", data);
@@ -100,7 +139,8 @@ export const createProduct = async (
 
 const getContractFromChain = (
   id: string,
-  { roles, steps, transitions, meta }: Chain
+  { roles, steps, transitions, meta }: Chain,
+  assignedRoles: AssignedRoles
 ): Contract => {
   try {
     const { title, model } = JSON.parse(meta);
@@ -111,6 +151,7 @@ const getContractFromChain = (
       steps,
       transitions,
       model,
+      assignedRoles,
     };
   } catch (e) {
     // костыль для контрактов созданных вне редактора
@@ -121,20 +162,24 @@ const getContractFromChain = (
       steps,
       transitions,
       model: {},
+      assignedRoles,
     };
   }
 };
 
 type StepUserInput = {
   id?: number;
-  precedents: number[];
+  precedents: { stepId: number; productId: number }[];
   quantity: number;
   sid: number;
 };
 
 type StepInput = {
   id: number;
-} & StepUserInput;
+  precedents: number[];
+  quantity: number;
+  sid: number;
+};
 
 type Step = StepInput & {
   tx: string;
