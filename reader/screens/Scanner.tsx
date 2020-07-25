@@ -1,13 +1,38 @@
 import * as React from "react";
-import { StyleSheet, Button } from "react-native";
+import { StyleSheet, Button, AsyncStorage } from "react-native";
 
 import { Text, View } from "../components/Themed";
 import BarScanner from "../components/BarScanner";
 import { useState, useEffect } from "react";
 import { ScanResults } from "../components/ScanResults";
 import { BarCodeScanningResult } from "expo-camera";
+import { STORAGE_KEY } from "../config";
 
-export default function Scanner({ navigation: { addListener } }: any) {
+type ScanType = "product" | string;
+
+export const SCANNED_DATA_STORAGE_KEY = `${STORAGE_KEY}:SCANNED_DATA`;
+
+const saveScannedData = async (
+  productId: number,
+  scannedData: string
+): Promise<void> => {
+  const storagedData = JSON.parse(
+    (await AsyncStorage.getItem(SCANNED_DATA_STORAGE_KEY)) || "{}"
+  );
+  storagedData[productId] = scannedData;
+  await AsyncStorage.setItem(
+    SCANNED_DATA_STORAGE_KEY,
+    JSON.stringify(storagedData)
+  );
+};
+
+export default function Scanner({
+  route: { params },
+  navigation: { addListener, navigate },
+}: any) {
+  const [scanType] = useState<ScanType>(
+    (params && params.scan.title) || "product"
+  );
   const [focused, setFocused] = useState<boolean>(false);
   let focusListener: any;
   let blurListener: any;
@@ -40,17 +65,15 @@ export default function Scanner({ navigation: { addListener } }: any) {
       data = JSON.parse(scannedData);
     } catch (e) {}
 
-    return (
-      <View
-        style={{
-          flex: 1,
-          flexDirection: "column",
-          justifyContent: "flex-end",
-        }}
-      >
-        {data ? (
-          <ScanResults data={data} />
-        ) : (
+    if (!data) {
+      return (
+        <View
+          style={{
+            flex: 1,
+            flexDirection: "column",
+            justifyContent: "flex-end",
+          }}
+        >
           <View
             style={{
               flex: 1,
@@ -60,19 +83,52 @@ export default function Scanner({ navigation: { addListener } }: any) {
           >
             <Text>Read data error</Text>
           </View>
-        )}
-        <Button title={"Tap to Scan Again"} onPress={() => setScanned(false)} />
-      </View>
-    );
+          <Button
+            title={"Tap to Scan Again"}
+            onPress={() => setScanned(false)}
+          />
+        </View>
+      );
+    }
+
+    if (scanType === "product") {
+      return (
+        <View
+          style={{
+            flex: 1,
+            flexDirection: "column",
+            justifyContent: "flex-end",
+          }}
+        >
+          <ScanResults data={data} />
+          <Button
+            title={"Tap to Scan Again"}
+            onPress={() => setScanned(false)}
+          />
+        </View>
+      );
+    }
+
+    saveScannedData(params!.scan.id, data).then(() => navigate("Account"));
   }
 
-  return <BarScanner handleBarCodeScanned={handleBarCodeScanned} />;
+  return (
+    <View style={styles.container}>
+      <View style={styles.scanInfoContainer}>
+        <Text>Scan a {scanType}</Text>
+      </View>
+      <BarScanner handleBarCodeScanned={handleBarCodeScanned} />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scanInfoContainer: {
+    width: "100%",
     alignItems: "center",
-    justifyContent: "center",
+    padding: 10,
   },
 });

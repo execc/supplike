@@ -7,7 +7,7 @@ import { BaseNodeFactory } from "../baseNode/BaseNodeFactory";
 import { BaseNodeModel } from "../baseNode/BaseNodeModel";
 import { BodyWidget } from "../../BodyWidget";
 import { BaseNodePreview } from "../baseNode/BaseNodeWidget";
-import { makeStyles, IconButton } from "@material-ui/core";
+import { makeStyles, IconButton, TextField } from "@material-ui/core";
 import SaveIcon from "@material-ui/icons/Save";
 import MenuIcon from "@material-ui/icons/Menu";
 import PublishIcon from "@material-ui/icons/Publish";
@@ -15,9 +15,9 @@ import {
   addContract,
   getDraftContract,
   editContract,
-  getContractName,
 } from "../../utils/contractUtils";
 import { Contract } from "../ContractsList/ContractsList";
+import { useState } from "react";
 
 // create an instance of the engine
 const engine = createEngine();
@@ -43,10 +43,9 @@ const SidebarStyles = makeStyles({
 type SidebarProps = {
   className?: string;
   onOpenList: () => void;
-  onSave: () => void;
 };
 
-const Sidebar = ({ className, onOpenList, onSave }: SidebarProps) => {
+const Sidebar = ({ className, onOpenList }: SidebarProps) => {
   const classes = SidebarStyles();
   return (
     <div className={className}>
@@ -60,9 +59,6 @@ const Sidebar = ({ className, onOpenList, onSave }: SidebarProps) => {
               <PublishIcon />
             </IconButton>
           )}
-          <IconButton onClick={onSave}>
-            <SaveIcon />
-          </IconButton>
         </div>
       </div>
       <BaseNodePreview title="Supplier" nodeType="supplier" />
@@ -89,18 +85,48 @@ type EditorProps = {
   id?: string;
 };
 
-export const Editor = ({ onOpenList, id }: EditorProps) => {
-  const classes = useEditorStyles();
+const ControlBlock = ({ onOpenList, id }: EditorProps) => {
+  const contract: Contract | null = id ? getDraftContract(id) : null;
 
   const handleSave = () => {
     const data = model.serialize();
     if (id) {
-      editContract(id, data);
+      editContract(id, name, data);
     } else {
-      addContract(getContractName(), data);
+      addContract(name, data);
     }
     onOpenList();
   };
+
+  const [name, setName] = useState<string>(contract ? contract.title : "");
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    setName(e.currentTarget.value);
+  };
+
+  return (
+    <div style={{ height: "43px", display: "flex", alignItems: "center" }}>
+      <TextField
+        style={{
+          marginTop: "3px",
+        }}
+        fullWidth
+        label="Input contract name"
+        size="small"
+        variant="standard"
+        onChange={handleNameChange}
+        value={name}
+      />
+      <IconButton disabled={!name} onClick={handleSave}>
+        <SaveIcon />
+      </IconButton>
+    </div>
+  );
+};
+
+export const Editor = ({ onOpenList, id }: EditorProps) => {
+  const classes = useEditorStyles();
 
   const contract: Contract | null = id ? getDraftContract(id) : null;
 
@@ -119,12 +145,18 @@ export const Editor = ({ onOpenList, id }: EditorProps) => {
 
   return (
     <div className={classes.wrapper}>
-      <Sidebar
-        className={classes.sidebar}
-        onOpenList={onOpenList}
-        onSave={handleSave}
-      />
-      <Workspace />
+      <Sidebar className={classes.sidebar} onOpenList={onOpenList} />
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          padding: "0 10px",
+        }}
+      >
+        <ControlBlock onOpenList={onOpenList} id={id} />
+        <Workspace />
+      </div>
     </div>
   );
 };

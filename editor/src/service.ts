@@ -64,3 +64,27 @@ export const getChainById = (id: string): Promise<Chain> => {
 
   return axios(options).then((res) => res.data);
 };
+
+export type RoleConfig = {
+  role: number;
+  userAddress: string;
+};
+
+export const assignUsers = async (chainId: string, roles: RoleConfig[]) => {
+  // return Promise.all(
+  // roles.map((role) => {
+  for (let i = 0; i < roles.length; i++) {
+    const options = {
+      method: "post",
+      url: `${SERVER}/chain/${chainId}/roles`,
+      headers,
+      data: JSON.stringify(roles[i]),
+    };
+
+    await axios(options).then((res) => res.data);
+  }
+
+  //   return await axios(options).then((res) => res.data);
+  // });
+  // );
+};

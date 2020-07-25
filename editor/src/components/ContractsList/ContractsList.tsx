@@ -7,6 +7,7 @@ import {
   IconButton,
   makeStyles,
   Button,
+  Typography,
 } from "@material-ui/core";
 import EditIcon from "@material-ui/icons/Edit";
 import EditAttributesIcon from "@material-ui/icons/EditAttributes";
@@ -19,7 +20,6 @@ import {
   publishContract,
   deleteContract,
   copyContract,
-  getContractName,
 } from "../../utils/contractUtils";
 import { useState } from "react";
 
@@ -32,9 +32,10 @@ export type ContractStatus = "draft" | "published";
 
 export type ContractData = any;
 
-export type ContractKeys = { [id: string]: string };
+export type ContractKeys = { [roleId: number]: string };
 
 export type Contract = {
+  id: string;
   title: string;
   status: ContractStatus;
   data?: ContractData;
@@ -81,13 +82,12 @@ export const ContractsList = ({
   });
 
   const handleCopyFactory = (id: string) => async () => {
-    copyContract(getContractName(), id);
+    copyContract(id);
     setContracts(await getContractsList());
   };
 
   const handlePublishFactory = (id: string) => async () => {
-    publishContract(id);
-    //TODO: delay
+    await publishContract(id);
     setContracts(await getContractsList());
   };
 
@@ -98,35 +98,38 @@ export const ContractsList = ({
 
   const handleEditAttributeFactory = (id: string) => () => onEditAttribute(id);
 
-  const renderContract = ({ title, status }: Contract) => (
-    <ListItem key={title}>
-      <ListItemText primary={title} secondary={status} />
+  const renderContract = ({ id, title, status }: Contract) => (
+    <ListItem key={id}>
+      <ListItemText
+        primary={title}
+        secondary={status === "published" ? id : status}
+      />
       <ListItemSecondaryAction>
         {status === "draft" && (
-          <IconButton onClick={() => onContractOpen(title)} title="edit">
+          <IconButton onClick={() => onContractOpen(id)} title="edit">
             <EditIcon />
           </IconButton>
         )}
         {status === "draft" && (
-          <IconButton onClick={handleCopyFactory(title)} title="copy">
+          <IconButton onClick={handleCopyFactory(id)} title="copy">
             <FileCopyIcon />
           </IconButton>
         )}
         {status === "published" && (
           <IconButton
             title="edit attributes"
-            onClick={handleEditAttributeFactory(title)}
+            onClick={handleEditAttributeFactory(id)}
           >
             <EditAttributesIcon />
           </IconButton>
         )}
         {status === "draft" && (
-          <IconButton onClick={handlePublishFactory(title)} title="publish">
+          <IconButton onClick={handlePublishFactory(id)} title="publish">
             <PublishIcon />
           </IconButton>
         )}
         {status === "draft" && (
-          <IconButton onClick={handleDeleteFactory(title)} title="delete">
+          <IconButton onClick={handleDeleteFactory(id)} title="delete">
             <DeleteIcon />
           </IconButton>
         )}
@@ -144,6 +147,9 @@ export const ContractsList = ({
         >
           <AddIcon /> Add new contract
         </Button>
+        <Typography variant="h4" align="center">
+          Contracts
+        </Typography>
         <List className={classes.list}>{contracts.map(renderContract)}</List>
       </div>
     </div>

@@ -91,7 +91,6 @@ class ModForm extends React.Component<ModFormProps, ModFormState> {
   handleTypeChange = (
     event: React.ChangeEvent<{ name?: string; value: ModType }>
   ) => {
-    console.log(event.target);
     this.setState({
       value: {
         ...this.state.value,
