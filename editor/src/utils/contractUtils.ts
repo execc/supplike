@@ -139,22 +139,18 @@ const contractToChain = (contract: Contract): Chain => {
     },
   } = contract;
 
-  const roles: ChainRolesInfoWithNodeId[] = Object.values(nodes.models)
-    .filter(
-      ({ nodeType }) => nodeType === "factorier" || nodeType === "supplier"
-    )
-    .map(
-      (model: any, index): ChainRolesInfoWithNodeId => {
-        const { title, id } = model;
-        model.roleId = index + 1;
+  const roles: ChainRolesInfoWithNodeId[] = Object.values(nodes.models).map(
+    (model: any, index): ChainRolesInfoWithNodeId => {
+      const { title, id } = model;
+      model.roleId = index + 1;
 
-        return {
-          id: index + 1,
-          name: title,
-          nodeId: id,
-        };
-      }
-    );
+      return {
+        id: index + 1,
+        name: title,
+        nodeId: id,
+      };
+    }
+  );
 
   const steps: ChainStepsInfo[] = roles.map(
     ({ name, id }): ChainStepsInfo => ({
