@@ -4,32 +4,42 @@ import { Text, View } from "./Themed";
 const successIcon = require("../assets/images/success.png");
 const errorIcon = require("../assets/images/error.png");
 import { StyleSheet } from "react-native";
-
-type timelineData = {
-  time: string;
-  title: string;
-  success: boolean;
-};
+import { TimelineData, getProductTimeLineForUser } from "../service";
+import { useState } from "react";
 
 type ScanResultsProps = {
-  data: timelineData[];
+  data: {
+    chainId: string;
+    productId: number;
+  };
 };
 
-export const ScanResults = ({ data }: ScanResultsProps) => {
-  const renderDetail = (rowData: timelineData) => {
+export const ScanResults = ({
+  data: { chainId, productId },
+}: ScanResultsProps) => {
+  const renderDetail = (rowData: TimelineData) => {
     return (
       <View style={{ flex: 1 }}>
-        <Text style={[styles.time]}>{rowData.time}</Text>
         <Text style={[styles.title]}>{rowData.title}</Text>
+        <Text style={[styles.time]}>{rowData.subtitle}</Text>
       </View>
     );
   };
 
+  const [timeline, setTimeline] = useState<TimelineData[]>([]);
+
+  React.useEffect(() => {
+    (async () => {
+      const timeline = await getProductTimeLineForUser(chainId, productId);
+      setTimeline(timeline);
+    })();
+  });
+
   return (
     <View style={styles.container}>
       <Timeline
-        data={data.map(({ title, time, success }: timelineData) => ({
-          time,
+        data={timeline.map(({ title, subtitle, success }: TimelineData) => ({
+          subtitle,
           title,
           icon: success ? successIcon : errorIcon,
         }))}
@@ -56,7 +66,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   time: {
-    fontSize: 16,
+    fontSize: 10,
     color: "#999",
   },
 });

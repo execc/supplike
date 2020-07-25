@@ -8,6 +8,7 @@ const SERVER = "http://84.201.165.26:3000";
 export type ChainRolesInfo = {
   id: number;
   name: string;
+  nodeId: string;
 };
 
 export type ChainStepsInfo = {
@@ -206,4 +207,75 @@ const getNextProductIdForStep = async (chainId: string, stepId: number) => {
   console.log("next id", nextId);
 
   return nextId;
+};
+
+export type TimelineData = {
+  title: string;
+  subtitle?: string;
+  success: boolean;
+};
+
+export const getProductTimeLineForUser = async (
+  chainId: string,
+  productId: number
+): Promise<TimelineData[]> => {
+  const data = await Promise.all([
+    getContractById(chainId),
+    getProductPath(chainId, productId),
+  ]);
+
+  return data[1].map(({ sid, tx }: Step) => {
+    const { roles, model } = data[0];
+    const role = roles.find(({ id }) => id === sid)!;
+    const nodes = model.layers[1].models;
+
+    const node = nodes[role.nodeId];
+
+    return {
+      title: node.title,
+      subtitle: tx,
+      success: true,
+    };
+  });
+};
+
+export const getProductPath = async (
+  chainId: string,
+  productId: number
+): Promise<Step[]> => {
+  const steps: Step[] = await getSteps(chainId);
+  const productSteps = steps
+    .filter(({ id }) => id === productId)
+    .sort((a, b) => Number(a.step) - Number(b.step));
+  const lastStep = productSteps[productSteps.length - 1];
+
+  return getPreviousStep([], steps, [lastStep.step]).sort(
+    (a, b) => Number(a.step) - Number(b.step)
+  );
+};
+
+const getPreviousStep = (
+  stepLine: Step[],
+  steps: Step[],
+  previousStepIds: string[]
+): Step[] => {
+  if (!previousStepIds.length) {
+    return stepLine;
+  }
+  let newPreviousStepIds: string[] = [];
+  previousStepIds.forEach((stepId: string) => {
+    const previousStep = steps.find(({ step }) => step === stepId);
+    if (!previousStep) {
+      console.log(stepId);
+      return;
+    }
+
+    stepLine.push(previousStep);
+    newPreviousStepIds = [
+      ...newPreviousStepIds,
+      ...previousStep.precedents.map((stepId: number) => stepId.toString()),
+    ];
+  });
+
+  return getPreviousStep(stepLine, steps, newPreviousStepIds);
 };
