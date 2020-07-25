@@ -114,9 +114,18 @@ export const AttributeEditor = ({ id, onOpenList }: AttributeEditorProps) => {
   const handlePublicKeyChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setPublicKey(e.currentTarget.value);
 
-  const handlePublish = () => {
-    setPublicKeys(id, keys);
-    onOpenList();
+  const [inProcess, setInProccess] = React.useState<boolean>(false);
+
+  const handlePublish = async () => {
+    setInProccess(true);
+    handleEditOff();
+    try {
+      await setPublicKeys(id, keys);
+      setInProccess(false);
+      onOpenList();
+    } catch (e) {
+      setInProccess(false);
+    }
   };
 
   if (!contract) {
@@ -146,6 +155,7 @@ export const AttributeEditor = ({ id, onOpenList }: AttributeEditorProps) => {
           <IconButton
             onClick={handlePublish}
             disabled={
+              inProcess ||
               !Object.values(models).every((nodes: any[]) =>
                 nodes.every(({ roleId }) => keys[roleId])
               )
@@ -203,6 +213,7 @@ export const AttributeEditor = ({ id, onOpenList }: AttributeEditorProps) => {
                             <IconButton
                               onClick={handleEditOnFactory(model.roleId)}
                               title="edit"
+                              disabled={inProcess}
                             >
                               <EditIcon />
                             </IconButton>
