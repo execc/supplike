@@ -7,12 +7,17 @@ const ipfs = ipfsClient('/ip4/84.201.165.26/tcp/5001')
 const env = {
     yc: {
         url: 'ws://84.201.165.26:50053',
+        admin: '2aef91bc6d2df7c41bd605caa267e8d357e18b741c4a785e06650d649d650409',
         user1: '6d3e6bb8ffaff80ce4270f3db91bbfd6fc13efe095754bb492c82ab4a15c184d',
         user2: '52af23d8909acc73ac127bdd8581c4272980504cc932195c336dfcfc320b1459',
-        user3: 'a770305ea6c6066cbfa2fe4616cfb9d659efe9c21fd58845b9eac420278405df'
+        user3: 'a770305ea6c6066cbfa2fe4616cfb9d659efe9c21fd58845b9eac420278405df',
+        user4: '8656fa38f86869203eee9dffca442513cfc8689731873b4cf60b7b6347719bcd',
+        user5: '8b4dfcb0720f7b1955d6b2a4f33347c82b593adab2bb42b93e17dc3be7ec64ee',
+        user6: 'a987fa752c40d9c134d4299c1f4d5a1b00312b77fa37ba09a9f40a05e7ef2725'
     },
     debug: {
         url: 'ws://86.57.193.146:5050',
+        admin: '2aef91bc6d2df7c41bd605caa267e8d357e18b741c4a785e06650d649d650409',
         user1: '8215192a2a3e07fdde156c4e752b550d067d39e9aca2446e6367b15c8dbdb75e',
         user2: '4405613e8c855dca75b8fa608d44bb08db1260970dd4a8309e723761c98f2baf',
         user3: '273839f82b2d94e1b557304423ab9115137db822a40ec0b72b196b968fdc72e1'
@@ -31,25 +36,29 @@ const lk = () => {
 
 var express = require('express');
 var bodyParser = require('body-parser')
+const add = require('ipfs-http-client/src/add')
 
 // Db emulation
 const db = {
 
 }
 //
-var groupBy = function(xs, key) {
-    return xs.reduce(function(rv, x) {
-      (rv[x[key]] = rv[x[key]] || []).push(x);
-      return rv;
+var groupBy = function (xs, key) {
+    return xs.reduce(function (rv, x) {
+        (rv[x[key]] = rv[x[key]] || []).push(x);
+        return rv;
     }, {});
-  };
-  
+};
+
 
 const accounts = {
-    admin: new Likelib.Account('2aef91bc6d2df7c41bd605caa267e8d357e18b741c4a785e06650d649d650409'),
+    admin: new Likelib.Account(env[currentEnv].admin),
     user1: new Likelib.Account(env[currentEnv].user1),
     user2: new Likelib.Account(env[currentEnv].user2),
-    user3: new Likelib.Account(env[currentEnv].user3)
+    user3: new Likelib.Account(env[currentEnv].user3),
+    user4: new Likelib.Account(env[currentEnv].user4),
+    user5: new Likelib.Account(env[currentEnv].user5),
+    user6: new Likelib.Account(env[currentEnv].user6),
 }
 
 Object.entries(accounts).forEach(([key, value]) => {
@@ -57,22 +66,24 @@ Object.entries(accounts).forEach(([key, value]) => {
 })
 
 const accountByAddress = (address) => {
-    if (accounts.user1._address === address) {
-        return 'user1'
-    }
-    if (accounts.user2._address === address) {
-        return 'user2'
-    }
-    if (accounts.user3._address === address) {
-        return 'user3'
-    }
+    return Object.entries(accounts).filter(([_, value]) => {
+        return value._address === address
+    }).map(([key]) => key)[0]
 }
 
+const readFromIpfs = async (path) => {
+    console.log(`Reading from ipfs ${path}`)
+    const chunks = []
+    for await (const chunk of ipfs.files.read(path)) {
+        chunks.push(chunk)
+    }
+    return Buffer.concat(chunks).toString()
+}
 
 /// Internal functions
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
-  }
+}
 
 const lastBlockInfo = () => new Promise((resolve, reject) => {
     console.log(`DEBUG: Call lastBlockInfo`)
@@ -146,7 +157,7 @@ const deploySupplyChain = async (roles, steps, transitions, account) => {
 }
 
 const addUserToRole = async (role, account, address) => {
-    console.log(`[addUserToRole] Input: ${JSON.stringify({role, account, address})}`)
+    console.log(`[addUserToRole] Input: ${JSON.stringify({ role, account, address })}`)
     const contract = Likelib.Contract.deployed(
         lk(),
         accounts[account],
@@ -289,9 +300,9 @@ app.post('/chain', json, async function (req, res) {
     const contractTransitions = transitions.flatMap(tr => [tr.from, tr.to])
 
     const result = await deploySupplyChain(
-        contractRoles, 
-        contractSteps, 
-        contractTransitions, 
+        contractRoles,
+        contractSteps,
+        contractTransitions,
         account
     )
         .then(result => {
@@ -342,7 +353,7 @@ app.get('/chain/:chainId', json, async function (req, res) {
     if (db.chains && db.chains[address]) {
         res.send(JSON.stringify(db.chains[address]))
     } else {
-        res.status(404).send(JSON.stringify({success: false, reason: 'Not Found'}))
+        res.status(404).send(JSON.stringify({ success: false, reason: 'Not Found' }))
     }
 });
 
@@ -352,18 +363,18 @@ app.get('/chain/:chainId/step', json, async function (req, res) {
 
     if (id) {
         const result = await getLastStep(id, 'admin', address)
-        .then(result => {
-            return {
-                success: true,
-                step: result["0"]
-            }
-        })
-        .catch(reason => {
-            return {
-                success: false,
-                reason
-            }
-        });
+            .then(result => {
+                return {
+                    success: true,
+                    step: result["0"]
+                }
+            })
+            .catch(reason => {
+                return {
+                    success: false,
+                    reason
+                }
+            });
 
         res
             .status(result.success ? 200 : 500)
@@ -389,8 +400,8 @@ app.post('/chain/:chainId/roles', json, async function (req, res) {
     }
 
     const result = await addUserToRole(
-        role, 
-        account, 
+        role,
+        account,
         address
     )
         .then(result => {
@@ -452,8 +463,8 @@ app.post('/chain/:chainId/batch', json, async function (req, res) {
     const { id, precedents, quantity, sid } = req.body;
 
     const result = await newBatch(
-        id, 
-        precedents, 
+        id,
+        precedents,
         quantity,
         sid,
         account,
@@ -519,7 +530,7 @@ app.get('/tx/:txId', json, async function (req, res) {
 // See example in examples/new_batch.json
 app.get('/chain/:chainId/step/:stepId', json, async function (req, res) {
     const address = req.params.chainId
-    const step    = req.params.stepId
+    const step = req.params.stepId
     const account = req.get('X-Account');
 
     const result = await getBatch(
@@ -531,15 +542,10 @@ app.get('/chain/:chainId/step/:stepId', json, async function (req, res) {
             const sensors = []
             for await (const file of ipfs.files.ls(`/${address}_${step}`)) {
                 const path = `/${address}_${step}/${file.name}`
-                console.log(`Reading from ipfs ${path}`)
-                const chunks = []
-               for await (const chunk of ipfs.files.read(path)) {
-                    chunks.push(chunk)
-                }
-                const content = Buffer.concat(chunks).toString()
+                const content = readFromIpfs(path)
                 console.log(`Read ${content}`)
                 sensors.push(JSON.parse(content))
-              }
+            }
 
             return {
                 success: true,
@@ -564,7 +570,7 @@ app.post('/chain/:chainId/sensor', json, async function (req, res) {
     const address = req.params.chainId
     const account = 'admin'
     const { id, sensorId, sensorType, sensorValue } = req.body
-    
+
 
     // Write sensor data to IPFS
     //
