@@ -14,6 +14,7 @@ import {
   IconButton,
   ListItemSecondaryAction,
   TextField,
+  Typography,
 } from "@material-ui/core";
 import MenuIcon from "@material-ui/icons/Menu";
 import ExpandLess from "@material-ui/icons/ExpandLess";
@@ -147,6 +148,9 @@ export const AttributeEditor = ({ id, onOpenList }: AttributeEditorProps) => {
             <PublishIcon />
           </IconButton>
         </div>
+        <Typography variant="h4" align="center">
+          User management
+        </Typography>
         <List className={classes.list}>
           {Object.keys(models).map((type) => (
             <React.Fragment key={type}>

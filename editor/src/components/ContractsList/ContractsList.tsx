@@ -7,6 +7,7 @@ import {
   IconButton,
   makeStyles,
   Button,
+  Typography,
 } from "@material-ui/core";
 import EditIcon from "@material-ui/icons/Edit";
 import EditAttributesIcon from "@material-ui/icons/EditAttributes";
@@ -146,6 +147,9 @@ export const ContractsList = ({
         >
           <AddIcon /> Add new contract
         </Button>
+        <Typography variant="h4" align="center">
+          Contracts
+        </Typography>
         <List className={classes.list}>{contracts.map(renderContract)}</List>
       </div>
     </div>
