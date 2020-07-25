@@ -144,7 +144,7 @@ export const Contract = ({
                 ? "Confirm transfer"
                 : contract.product.type === "store"
                 ? "Accept product"
-                : "Create product"
+                : "Send"
             }
             onPress={handleCreateProduct}
           />
