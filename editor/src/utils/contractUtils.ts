@@ -89,7 +89,7 @@ export const deleteContract = (id: string) => {
 };
 
 export const setPublicKeys = (id: string, keys: ContractKeys) => {
-  assignUsers(
+  return assignUsers(
     id,
     Object.keys(keys).map(
       (roleId: string): RoleConfig => ({
