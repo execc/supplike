@@ -440,7 +440,7 @@ app.get('/chain/:chainId/roles', json, async function (req, res) {
     }
 
     res
-        .status(result)
+        .status(200)
         .send(JSON.stringify(result));
 });
 
@@ -566,7 +566,7 @@ app.post('/chain/:chainId/sensor', json, async function (req, res) {
     const { id, sensorId, sensorType, sensorValue } = req.body
     
 
-    // TODO: Write sensor data to IPFS
+    // Write sensor data to IPFS
     //
     const result = await getLastStep(id, account, address)
         .then(async result => {
@@ -594,8 +594,6 @@ app.post('/chain/:chainId/sensor', json, async function (req, res) {
                 }
             )
             console.log(`Success adding content to IPFS ${JSON.stringify(resultipfs)}`)
-
-            //db.sensor[address][stepId].push()
 
             return {
                 ...result,
