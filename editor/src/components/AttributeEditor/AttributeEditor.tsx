@@ -58,6 +58,13 @@ const useStyles = makeStyles({
   },
 });
 
+const nodeTypeTextMap = {
+  supplier: "Suppliers",
+  link: "Transfers",
+  factorier: "Factoriers",
+  store: "Stores",
+};
+
 export const AttributeEditor = ({ id, onOpenList }: AttributeEditorProps) => {
   const classes = useStyles();
 
@@ -116,18 +123,18 @@ export const AttributeEditor = ({ id, onOpenList }: AttributeEditorProps) => {
     return null;
   }
 
-  const models = (Object.values(contract.data.layers[1].models) as any[])
-    .filter((model) => model.nodeType !== "link")
-    .reduce((models, node) => {
-      const type = node.nodeType;
-      if (!models[type]) {
-        models[type] = [node];
-      } else {
-        models[type].push(node);
-      }
+  const models = (Object.values(
+    contract.data.layers[1].models
+  ) as any[]).reduce((models, node) => {
+    const type = node.nodeType;
+    if (!models[type]) {
+      models[type] = [node];
+    } else {
+      models[type].push(node);
+    }
 
-      return models;
-    }, {});
+    return models;
+  }, {});
 
   return (
     <div className={classes.wrapper}>
@@ -155,7 +162,7 @@ export const AttributeEditor = ({ id, onOpenList }: AttributeEditorProps) => {
           {Object.keys(models).map((type) => (
             <React.Fragment key={type}>
               <ListItem button onClick={handleOpenFactory(type)}>
-                <ListItemText primary={type} />
+                <ListItemText primary={nodeTypeTextMap[type]} />
                 {open === type ? <ExpandLess /> : <ExpandMore />}
               </ListItem>
               <Collapse in={open === type} timeout="auto" unmountOnExit>
