@@ -1,6 +1,6 @@
 {
   "name": "likelib",
-  "version": "0.2.3",
+  "version": "0.2.6",
   "description": "Likelib JS API",
   "main": "likelib.js",
   "scripts": {
