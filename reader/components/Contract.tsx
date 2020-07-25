@@ -7,9 +7,11 @@ import { Contract as ContractType, createProduct } from "../service";
 import { SCANNED_DATA_STORAGE_KEY } from "../screens/Scanner";
 import { accounts } from "../config";
 
+export type ProductType = "component" | "product" | "transfer" | "store";
+
 export type Product = {
   // id: number;
-  type: "component" | "product" | "transfer";
+  type: ProductType;
   stepId: number;
   title: string;
   precedents: {
@@ -78,7 +80,9 @@ export const Contract = ({
   const renderProduct = (product: Product) => {
     return [
       ...product.precedents.map(renderItemToScan),
-      product.type !== "transfer" && renderItemToScan(product),
+      product.type !== "transfer" &&
+        product.type !== "store" &&
+        renderItemToScan(product),
     ];
   };
 
@@ -91,7 +95,7 @@ export const Contract = ({
 
     const newProduct = await createProduct(accounts[account].user, id, {
       id:
-        product!.type === "transfer"
+        product!.type === "transfer" || product!.type === "store"
           ? scannedData[product!.precedents[0].stepId].productId
           : scannedData[product!.stepId].productId,
       quantity: 1,
@@ -135,9 +139,11 @@ export const Contract = ({
             }
             title={
               inProccess
-                ? "Creating..."
+                ? "Proccessing..."
                 : contract.product.type === "transfer"
                 ? "Confirm transfer"
+                : contract.product.type === "store"
+                ? "Accept product"
                 : "Create product"
             }
             onPress={handleCreateProduct}

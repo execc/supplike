@@ -9,6 +9,7 @@ import {
   Contract,
   Product,
   ContractCreateStatus,
+  ProductType,
 } from "../components/Contract";
 import {
   ChainTransitionsInfo,
@@ -102,10 +103,20 @@ export default function Account({ navigation, route: { params } }: any) {
 
       const node = productsNode[step.id - 1];
 
+      let type: ProductType = "product";
+      switch (node.nodeType) {
+        case "link":
+          type = "transfer";
+          break;
+        case "store":
+          type = "store";
+          break;
+      }
+
       product = {
         // id: step.id,
         stepId: step.id,
-        type: node.nodeType === "link" ? "transfer" : "product",
+        type,
         title: node.title || "Your product",
         precedents: transitions.map(({ from }) => ({
           stepId: from,
