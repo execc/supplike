@@ -31,7 +31,7 @@ export default function Scanner({
   route: { params },
   navigation: { addListener, navigate, push },
 }: any) {
-  const [scanType] = useState<ScanType>(
+  const [scanType, setScanType] = useState<ScanType>(
     (params && params.scan.title) || "product"
   );
   const [focused, setFocused] = useState<boolean>(false);
@@ -114,6 +114,9 @@ export default function Scanner({
       navigate("Account", {
         scannedData: data,
       });
+      setScannedData("");
+      setScanned(false);
+      setScanType("product");
     });
   }
 
